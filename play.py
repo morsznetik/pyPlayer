@@ -11,25 +11,26 @@ os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = '1'
 import pygame
 
 ASCII_RENDER_STYLES = {
-    'default': "      `.-':_,^=;><+!rc*/z?sLTv)J7(|Fi{C}fI31tlu[neoZ5Yxjya]2ESwqkP6h9d4VpOGbUAKXHm8RD#$Bg0MNWQ%&@",
+    'default': "      .-':_,^=;><+!rc*/z?sLTv)J7(|Fi{C}fI31tlu[neoZ5Yxjya]2ESwqkP6h9d4VpOGbUAKXHm8RD#$Bg0MNWQ%&@",
     'legacy': "     .:-=+*#%@",
+    'blockNoColor': " ▒▓█",
     'block': "▒▓█",
     "blockv2": "█████████",
     'braille': '⠀⠀⠀⠀⠀⠠⠰⠱⠲⠳⠴⠵⠶⠷⠸⠹⠺⠻⠼⠽⠾⠿'
 }
 
-
 def clear_screen():
     subprocess.run('cls' if os.name == 'nt' else 'clear', shell=True)
 
 
-def convert_to_ascii(image_path, width, height, ascii_chars, color=False):
+def convert_to_ascii(image_path, width, height, ascii_chars, color=False, frame_color=None):
     img = Image.open(image_path).resize((width, height))
     intensity_range = 255 / (len(ascii_chars) - 1)
 
     if color:
         return convert_to_ascii_color(img, ascii_chars, intensity_range)
-    return convert_to_ascii_grayscale(img, ascii_chars, intensity_range)
+    
+    return convert_to_ascii_grayscale(img, ascii_chars, intensity_range, frame_color)
 
 
 def convert_to_ascii_color(img, ascii_chars, intensity_range):
@@ -49,12 +50,22 @@ def convert_to_ascii_color(img, ascii_chars, intensity_range):
     return ''.join(ascii_image)
 
 
-def convert_to_ascii_grayscale(img, ascii_chars, intensity_range):
+def convert_to_ascii_grayscale(img, ascii_chars, intensity_range, frame_color=None):
     img = img.convert('L')  # Convert to grayscale
+    
+    # If frame_color is provided, apply it
+    if frame_color:
+        r, g, b = frame_color
+        frame = f'\033[38;2;{r};{g};{b}m'  # Set custom RGB frame color
+        reset_color = '\033[0m'  # Reset color at the end
+        ascii_image = ''.join([ascii_chars[int(pixel_value / intensity_range)] for pixel_value in img.getdata()])
+        return f'{frame}{ascii_image}{reset_color}'
+    
+    # Default case, return without frame styling
     return ''.join([ascii_chars[int(pixel_value / intensity_range)] for pixel_value in img.getdata()])
 
 
-def preload_frames(frame_folder, width, height, ascii_chars, color=False):
+def preload_frames(frame_folder, width, height, ascii_chars, color=False, frame_color=None):
     frame_files = sorted(glob.glob(os.path.join(frame_folder, '*.png')))
     frames = []
     with tqdm(total=len(frame_files), desc="Processing frames", unit='frame', ncols=100) as pbar:
@@ -65,7 +76,7 @@ def preload_frames(frame_folder, width, height, ascii_chars, color=False):
     return frames
 
 
-def play_video_with_sound(frame_folder, audio_path, fps, volume, skip_threshold, frame_skip, color, debug):
+def play_video_with_sound(frame_folder, audio_path, fps, volume, skip_threshold, frame_skip, color, debug, ascii_chars, frame_color=None):
     pygame.mixer.init()
     pygame.mixer.music.load(audio_path)
     pygame.mixer.music.set_volume(volume / 100.0)
@@ -75,8 +86,6 @@ def play_video_with_sound(frame_folder, audio_path, fps, volume, skip_threshold,
     frame_duration = 1.0 / fps
 
     pygame.mixer.music.play(fade_ms=5)
-
-    term_size = os.get_terminal_size()
 
     start_time = time.perf_counter()
     next_frame_time = start_time
@@ -95,9 +104,9 @@ def play_video_with_sound(frame_folder, audio_path, fps, volume, skip_threshold,
                 current_frame += 1
                 continue
 
-            if current_frame % fps == 0:
-                term_size = os.get_terminal_size()
-            ascii_frame = convert_to_ascii(frame_files[current_frame], *term_size, ascii_chars, color)
+            # Use the terminal size (without async update)
+            term_size = os.get_terminal_size()
+            ascii_frame = convert_to_ascii(frame_files[current_frame], *term_size, ascii_chars, color, frame_color)
 
             sys.stdout.write("\033[H")
             sys.stdout.write(ascii_frame)
@@ -105,7 +114,8 @@ def play_video_with_sound(frame_folder, audio_path, fps, volume, skip_threshold,
             if debug:
                 debug_info = (f"[Frame: {current_frame + 1}/{total_frames}, "
                               f"A/V Off sync: {time_difference:.6f}s, "
-                              f"Skipped: {skipped_frames}]")
+                              f"Skipped: {skipped_frames}, "
+                              f"{term_size}]")
 
                 sys.stdout.write(f"\033[{term_size.lines};0H{debug_info}")
 
@@ -123,7 +133,7 @@ def play_video_with_sound(frame_folder, audio_path, fps, volume, skip_threshold,
         time.sleep(0.1)
 
 
-if __name__ == "__main__":
+def main():
     parser = argparse.ArgumentParser(description="Play a video with colored ASCII art and sound.")
     parser.add_argument('frame_folder', type=str, help='Path to the folder containing video frames')
     parser.add_argument('audio_path', type=str, help='Path to the audio file')
@@ -138,7 +148,19 @@ if __name__ == "__main__":
     parser.add_argument('--noaudio', '-na', action='store_true', help='Disable sound')
     parser.add_argument('--color', '-c', action='store_true', help='Enable color rendering')
     parser.add_argument('--debug', '-d', action='store_true', help='Enable debug information')
+    parser.add_argument('--frame-color', type=str, help='Custom RGB color for frame in the format R,G,B')
     args = parser.parse_args()
+
+    # Convert the frame color input into a tuple of integers
+    frame_color = None
+    if args.frame_color:
+        try:
+            frame_color = tuple(map(int, args.frame_color.split(',')))
+            if len(frame_color) != 3 or any(c < 0 or c > 255 for c in frame_color):
+                raise ValueError
+        except ValueError:
+            print("Error: Frame color must be in the format R,G,B with values between 0 and 255.")
+            sys.exit(1)
 
     ascii_chars = ASCII_RENDER_STYLES.get(args.render, ASCII_RENDER_STYLES['default'])
     sys.stdout.write("\033[?25l")
@@ -146,18 +168,19 @@ if __name__ == "__main__":
 
     if args.generate:
         term_size = os.get_terminal_size()
-        frames = preload_frames(args.frame_folder, *term_size, ascii_chars, args.color)
+        frames = preload_frames(args.frame_folder, *term_size, ascii_chars, args.color, frame_color)
     else:
         frames = None
 
     try:
         clear_screen()
-        play_video_with_sound(args.frame_folder, args.audio_path, args.fps, args.volume, args.skip_threshold,
-                              args.frame_skip, args.color, args.debug)
+        play_video_with_sound(args.frame_folder, args.audio_path, args.fps, args.volume, args.skip_threshold, args.frame_skip, args.color, args.debug, ascii_chars, frame_color)
     except KeyboardInterrupt:
         clear_screen()
     finally:
         sys.stdout.write("\033[?25h")
         sys.stdout.flush()
-        clear_screen()
         sys.exit(0)
+
+if __name__ == "__main__":
+    main()
