@@ -1,0 +1,9 @@
+{
+    "venvPath": ".venv",
+    "venv": ".",
+    "typeCheckingMode": "basic",
+    "reportMissingImports": false,
+    "diagnosticSeverityOverrides": {
+        "reportMissingImports": "information"
+    }
+}
