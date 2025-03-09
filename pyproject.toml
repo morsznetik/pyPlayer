@@ -7,7 +7,9 @@ requires-python = ">=3.13"
 dependencies = [
     "pillow",
     "pygame",
-    "tqdm"
+    "tqdm",
+    "pre-commit",
+    "ruff",
 ]
 
 [project.scripts]
