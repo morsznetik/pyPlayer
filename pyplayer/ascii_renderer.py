@@ -1,9 +1,8 @@
-import os
 import sys
-from typing import Dict, List, Optional, Tuple, Union
+from typing import List, Optional, Tuple
 from PIL import Image
-from tqdm import tqdm
 from abc import ABC, abstractmethod
+
 
 class ColorManager:
     @staticmethod
@@ -15,7 +14,9 @@ class ColorManager:
         return "\033[0m"
 
     @staticmethod
-    def calculate_average_color(colors: List[Tuple[int, int, int]]) -> Tuple[int, int, int]:
+    def calculate_average_color(
+        colors: List[Tuple[int, int, int]],
+    ) -> Tuple[int, int, int]:
         if not colors:
             return (0, 0, 0)
         avg_r = sum(c[0] for c in colors) // len(colors)
@@ -23,8 +24,11 @@ class ColorManager:
         avg_b = sum(c[2] for c in colors) // len(colors)
         return (avg_r, avg_g, avg_b)
 
+
 class BaseRenderer(ABC):
-    def __init__(self, color: bool = False, frame_color: Optional[Tuple[int, int, int]] = None):
+    def __init__(
+        self, color: bool = False, frame_color: Optional[Tuple[int, int, int]] = None
+    ):
         self.color = color
         self.frame_color = frame_color
 
@@ -35,65 +39,88 @@ class BaseRenderer(ABC):
     def apply_frame_color(self, text: str) -> str:
         if self.frame_color:
             r, g, b = self.frame_color
-            return f"{ColorManager.rgb_to_ansi(r, g, b)}{text}{ColorManager.reset_color()}"
+            return (
+                f"{ColorManager.rgb_to_ansi(r, g, b)}{text}{ColorManager.reset_color()}"
+            )
         return text
 
+
 class TextRenderer(BaseRenderer):
-    def __init__(self, ascii_chars: str, color: bool = False, frame_color: Optional[Tuple[int, int, int]] = None):
+    def __init__(
+        self,
+        ascii_chars: str,
+        color: bool = False,
+        frame_color: Optional[Tuple[int, int, int]] = None,
+    ):
         super().__init__(color, frame_color)
         self.ascii_chars = ascii_chars
 
     def render(self, img: Image.Image, width: int, height: int) -> str:
         img = img.resize((width, height))
         intensity_range = 255 / (len(self.ascii_chars) - 1)
-        return self._render_color(img, intensity_range) if self.color else self._render_grayscale(img, intensity_range)
+        return (
+            self._render_color(img, intensity_range)
+            if self.color
+            else self._render_grayscale(img, intensity_range)
+        )
 
     def _render_color(self, img: Image.Image, intensity_range: float) -> str:
-        img = img.convert('RGB')
+        img = img.convert("RGB")
         ascii_image = []
 
         for pixel in img.getdata():
             r, g, b = pixel
             if r == g == b == 0:
-                ascii_image.append(' ')
+                ascii_image.append(" ")
             else:
                 color_code = ColorManager.rgb_to_ansi(r, g, b)
                 ascii_char = self.ascii_chars[int((r + g + b) / 3 / intensity_range)]
                 ascii_image.append(color_code + ascii_char)
 
         ascii_image.append(ColorManager.reset_color())
-        return ''.join(ascii_image)
+        return "".join(ascii_image)
 
     def _render_grayscale(self, img: Image.Image, intensity_range: float) -> str:
-        img = img.convert('L')
-        ascii_image = ''.join([self.ascii_chars[int(pixel_value / intensity_range)] 
-                             for pixel_value in img.getdata()])
+        img = img.convert("L")
+        ascii_image = "".join(
+            [
+                self.ascii_chars[int(pixel_value / intensity_range)]
+                for pixel_value in img.getdata()
+            ]
+        )
         return self.apply_frame_color(ascii_image)
+
 
 class BrailleRenderer(BaseRenderer):
     BRAILLE_PATTERN_BASE = 0x2800
     DOT_MAPPING = [
-        (0, 0), (1, 0),  # top dots
-        (0, 1), (1, 1),  # middle dots
-        (0, 2), (1, 2),  # bottom dots
-        (0, 3), (1, 3)   # extended dots
+        (0, 0),
+        (1, 0),  # top dots
+        (0, 1),
+        (1, 1),  # middle dots
+        (0, 2),
+        (1, 2),  # bottom dots
+        (0, 3),
+        (1, 3),  # extended dots
     ]
 
     def render(self, img: Image.Image, width: int, height: int) -> str:
         target_width = width * 2
         target_height = height * 4
         img = self._prepare_image(img, target_width, target_height)
-        gray_img = img.convert('L')
+        gray_img = img.convert("L")
         threshold = self._calculate_otsu_threshold(gray_img)
         return self._convert_to_braille(img, gray_img, threshold)
 
-    def _prepare_image(self, img: Image.Image, target_width: int, target_height: int) -> Image.Image:
+    def _prepare_image(
+        self, img: Image.Image, target_width: int, target_height: int
+    ) -> Image.Image:
         orig_width, orig_height = img.size
         scale = max(target_width / orig_width, target_height / orig_height)
         new_width = int(orig_width * scale)
         new_height = int(orig_height * scale)
-        img = img.resize((new_width, new_height), Image.LANCZOS)
-        
+        img = img.resize((new_width, new_height), Image.LANCZOS)  # type: ignore
+
         left = (new_width - target_width) // 2
         top = (new_height - target_height) // 2
         right = left + target_width
@@ -130,12 +157,14 @@ class BrailleRenderer(BaseRenderer):
 
         return threshold
 
-    def _convert_to_braille(self, color_img: Image.Image, gray_img: Image.Image, threshold: int) -> str:
+    def _convert_to_braille(
+        self, color_img: Image.Image, gray_img: Image.Image, threshold: int
+    ) -> str:
         width, height = gray_img.size
         gray_pixels = list(gray_img.getdata())
-        color_pixels = list(color_img.convert('RGB').getdata())
+        color_pixels = list(color_img.convert("RGB").getdata())
         braille_text = []
-        
+
         dot_bit = {
             (0, 0): 0x01,  # top-left 1/1
             (1, 0): 0x08,  # top-right 1/2
@@ -144,71 +173,84 @@ class BrailleRenderer(BaseRenderer):
             (0, 2): 0x04,  # bottom-left 3/1
             (1, 2): 0x20,  # bottom-right 3/2
             (0, 3): 0x40,  # lower-left 4/1
-            (1, 3): 0x80   # lower-right 4/2
+            (1, 3): 0x80,  # lower-right 4/2
         }
-        
+
         cols = width // 2
         rows = height // 4
         cols = max(1, cols)
         rows = max(1, rows)
-        
+
         # >its 8am give me a break
         for y in range(rows):
             row = []
             for x in range(cols):
                 code = self.BRAILLE_PATTERN_BASE
                 active_dots = []
-                
+
                 for dy in range(4):
                     for dx in range(2):
                         px = x * 2 + dx
                         py = y * 4 + dy
-                        
+
                         if px >= width or py >= height:
                             continue
                         # TODO: wtf
                         idx = py * width + px
-                        if idx < len(gray_pixels) and gray_pixels[idx] > threshold * .8:
+                        if (
+                            idx < len(gray_pixels)
+                            and gray_pixels[idx] > threshold * 0.8
+                        ):
                             code |= dot_bit[(dx, dy)]
                             active_dots.append(color_pixels[idx])
-                
+
                 if active_dots:
                     if self.color:
                         avg_color = ColorManager.calculate_average_color(active_dots)
-                        row.append(f"{ColorManager.rgb_to_ansi(*avg_color)}{chr(code)}{ColorManager.reset_color()}")
+                        row.append(
+                            f"{ColorManager.rgb_to_ansi(*avg_color)}{chr(code)}{ColorManager.reset_color()}"
+                        )
                     else:
                         row.append(chr(code))
                 else:
-                    row.append(' ')
-            
-            braille_text.append(''.join(row))
-        
-        return self.apply_frame_color('\n'.join(braille_text))
+                    row.append(" ")
+
+            braille_text.append("".join(row))
+
+        return self.apply_frame_color("\n".join(braille_text))
+
 
 class AsciiRenderer:
     ASCII_STYLES = {
-        'default': "      .-':_,^=;><+!rc*/z?sLTv)J7(|Fi{C}fI31tlu[neoZ5Yxjya]2ESwqkP6h9d4VpOGbUAKXHm8RD#$Bg0MNWQ%&@",
-        'legacy': "     .:-=+*#%@",
-        'blockNoColor': " ▒▓█",
-        'block': "▒▓█",
-        'blockv2': "█████████"
+        "default": "      .-':_,^=;><+!rc*/z?sLTv)J7(|Fi{C}fI31tlu[neoZ5Yxjya]2ESwqkP6h9d4VpOGbUAKXHm8RD#$Bg0MNWQ%&@",
+        "legacy": "     .:-=+*#%@",
+        "blockNoColor": " ▒▓█",
+        "block": "▒▓█",
+        "blockv2": "█████████",
     }
 
-    def __init__(self, style: str = 'default', color: bool = False, frame_color: Optional[Tuple[int, int, int]] = None) -> None:
-        if style == 'braille':
+    def __init__(
+        self,
+        style: str = "default",
+        color: bool = False,
+        frame_color: Optional[Tuple[int, int, int]] = None,
+    ) -> None:
+        if style == "braille":
             self.renderer = BrailleRenderer(color=color, frame_color=frame_color)
         else:
-            ascii_chars = self.ASCII_STYLES.get(style, self.ASCII_STYLES['default'])
-            self.renderer = TextRenderer(ascii_chars, color=color, frame_color=frame_color)
+            ascii_chars = self.ASCII_STYLES.get(style, self.ASCII_STYLES["default"])
+            self.renderer = TextRenderer(
+                ascii_chars, color=color, frame_color=frame_color
+            )
 
     def hide_cursor(self) -> None:
         """Hide the terminal cursor"""
-        sys.stdout.write('\033[?25l')
+        sys.stdout.write("\033[?25l")
         sys.stdout.flush()
 
     def show_cursor(self) -> None:
         """Show the terminal cursor"""
-        sys.stdout.write('\033[?25h')
+        sys.stdout.write("\033[?25h")
         sys.stdout.flush()
 
     def convert_frame(self, image_path: str, width: int, height: int) -> str:
