@@ -31,6 +31,7 @@ MANIFEST
 #  before PyInstaller builds the exe, so as to inject date/other infos into it.
 *.manifest
 *.spec
+!pyplayer.spec
 
 # Installer logs
 pip-log.txt
@@ -81,6 +82,9 @@ target/
 # IPython
 profile_default/
 ipython_config.py
+
+# uv
+uv.lock
 
 # pyenv
 #   For a library or package, you might want to ignore these files since the code is

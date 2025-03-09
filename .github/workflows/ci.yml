@@ -1,0 +1,91 @@
+name: Test, build, deploy
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.13'
+      - name: Install dependencies
+        run: |
+          curl -sSf https://astral.sh/uv/install.sh | sh
+          uv pip install pre-commit
+      - name: Run pre-commit hooks
+        run: pre-commit run --all-files
+
+  test:
+    runs-on: ubuntu-latest
+    needs: lint
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.13'
+      - name: Install dependencies
+        run: |
+          curl -sSf https://astral.sh/uv/install.sh | sh
+          uv pip install -e .[dev,test]
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg
+      - name: Run tests
+        run: |
+          python -m pytest
+
+  build:
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.13'
+      - name: Install dependencies
+        run: |
+          curl -sSf https://astral.sh/uv/install.sh | sh
+          uv pip install build wheel
+      - name: Build package
+        run: python -m build
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: dist
+          path: dist/
+
+  build-executable:
+    runs-on: windows-latest
+    needs: test
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.13'
+      - name: Install dependencies
+        run: |
+          curl -sSf https://astral.sh/uv/install.sh | sh
+          uv pip install -e .
+          uv pip install pyinstaller
+      - name: Install FFmpeg
+        run: |
+          choco install ffmpeg -y
+          refreshenv
+      - name: Build executable
+        run: |
+          pyinstaller --onefile --name pyplayer --add-data "pyplayer;pyplayer" pyplayer/__init__.py
+      - name: Upload executable
+        uses: actions/upload-artifact@v3
+        with:
+          name: pyplayer-windows
+          path: dist/pyplayer.exe

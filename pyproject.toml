@@ -1,0 +1,14 @@
+[project]
+name = "pyplayer"
+version = "0.1.0"
+description = "A terminal-based video player with ASCII art rendering"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "pillow",
+    "pygame",
+    "tqdm"
+]
+
+[project.scripts]
+pyplayer = "pyplayer:main"
