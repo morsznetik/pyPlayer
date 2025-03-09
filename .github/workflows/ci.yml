@@ -23,11 +23,11 @@ jobs:
       - name: Install dependencies
         run: |
           uv pip install pre-commit
-      - name: Install pre-commit
+      - name: Activate venv and run pre-commit hooks
         run: |
-          uv pip install pre-commit
-      - name: Run pre-commit hooks
-        run: pre-commit run --all-files
+          source .venv/bin/activate
+          pre-commit run --all-files
+
 
   test:
     runs-on: ubuntu-latest
