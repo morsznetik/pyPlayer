@@ -107,7 +107,7 @@ jobs:
           uv pip install pyinstaller
       - name: Build executable
         run: |
-          pyinstaller --onefile --name pyplayer --add-data "pyplayer;pyplayer" pyplayer/__init__.py
+          python -m PyInstaller --onefile --name pyplayer --add-data "pyplayer;pyplayer" pyplayer/__init__.py
       - name: Upload executable
         uses: actions/upload-artifact@v4
         with:
