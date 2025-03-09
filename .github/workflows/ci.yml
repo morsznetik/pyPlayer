@@ -98,6 +98,9 @@ jobs:
         uses: astral-sh/setup-uv@v5
       - name: Create virtual environment
         run: uv venv
+      - name: Activate virtual environment
+        run: |
+          .venv\Scripts\Activate
       - name: Install dependencies
         run: |
           uv pip install -e .
