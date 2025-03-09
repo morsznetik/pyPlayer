@@ -1,8 +1,9 @@
 import os
-import subprocess
 import multiprocessing
 import tempfile
 import shutil
+import ffmpeg
+import re
 
 
 class VideoProcessor:
@@ -20,68 +21,90 @@ class VideoProcessor:
             self._extract_audio()
             self._extract_frames(grayscale, color_smoothing)
             return self.frames_dir, self.audio_path, fps
-        except subprocess.CalledProcessError as e:
-            raise RuntimeError(f"Error processing video: {e}")
+        except ffmpeg.Error as e:
+            raise RuntimeError(
+                f"Error processing video: {e.stderr.decode() if hasattr(e, 'stderr') else str(e)}"
+            )
 
     def _extract_audio(self):
         """Extract audio from video file"""
         num_threads = multiprocessing.cpu_count()
-        audio_command = [
-            "ffmpeg",
-            "-i",
-            self.video_path,
-            "-q:a",
-            "0",
-            "-map",
-            "a",
-            "-threads",
-            str(num_threads),
-            self.audio_path,
-        ]
-        subprocess.run(audio_command, check=True, capture_output=True)
+        try:
+            (
+                ffmpeg.input(self.video_path)
+                .output(self.audio_path, q="0", map="a", threads=num_threads)
+                .run(capture_stdout=True, capture_stderr=True, overwrite_output=True)
+            )
+        except ffmpeg.Error as e:
+            raise RuntimeError(
+                f"Error extracting audio: {e.stderr.decode() if hasattr(e, 'stderr') else str(e)}"
+            )
 
     def _extract_frames(self, grayscale=False, color_smoothing=False):
         """Extract and process frames from video file"""
         num_threads = multiprocessing.cpu_count()
-        filter_complex = "unsharp=7:7:3:7:7:3"
 
+        # Start with the base video input
+        stream = ffmpeg.input(self.video_path)
+
+        # Apply unsharp filter
+        stream = ffmpeg.filter(
+            stream,
+            "unsharp",
+            luma_msize_x=7,
+            luma_msize_y=7,
+            luma_amount=3,
+            chroma_msize_x=3,
+            chroma_msize_y=3,
+            chroma_amount=0,
+        )
+        # Apply grayscale filter if requested
         if grayscale:
-            filter_complex += ",lutrgb=r='if(gte(val,0), if(gte(val,224), 255, if(gte(val,128), 192, if(gte(val,64), 128, 0))))':g='if(gte(val,0), if(gte(val,224), 255, if(gte(val,128), 192, if(gte(val,64), 128, 0))))':b='if(gte(val,0), if(gte(val,224), 255, if(gte(val,128), 192, if(gte(val,64), 128, 0))))',hue=s=0"
+            # Apply the complex lutrgb filter
+            lut_expr = "if(gte(val,0), if(gte(val,224), 255, if(gte(val,128), 192, if(gte(val,64), 128, 0))))"
+            stream = ffmpeg.filter(stream, "lutrgb", r=lut_expr, g=lut_expr, b=lut_expr)
+            # Apply hue filter to remove saturation
+            stream = ffmpeg.filter(stream, "hue", s=0)
 
         if color_smoothing:
-            filter_complex += ",hqdn3d"
+            stream = ffmpeg.filter(stream, "hqdn3d")
 
-        frames_command = [
-            "ffmpeg",
-            "-i",
-            self.video_path,
-            "-vf",
-            filter_complex,
-            "-threads",
-            str(num_threads),
-            os.path.join(self.frames_dir, "frame_%05d.png"),
-        ]
-        subprocess.run(frames_command, check=True, capture_output=True)
+        output_path = os.path.join(self.frames_dir, "frame_%05d.png")
+        try:
+            (
+                stream.output(output_path, threads=num_threads).run(
+                    capture_stdout=True, capture_stderr=True, overwrite_output=True
+                )
+            )
+        except ffmpeg.Error as e:
+            raise RuntimeError(
+                f"Error extracting frames: {e.stderr.decode() if hasattr(e, 'stderr') else str(e)}"
+            )
 
     def _get_video_fps(self):
         """Get video frame rate using FFprobe"""
         try:
-            cmd = [
-                "ffprobe",
-                "-v",
-                "error",
-                "-select_streams",
-                "v:0",
-                "-show_entries",
-                "stream=r_frame_rate",
-                "-of",
-                "default=noprint_wrappers=1:nokey=1",
-                self.video_path,
-            ]
-            output = subprocess.check_output(cmd).decode().strip()
-            num, den = map(int, output.split("/"))
-            return num / den
-        except (subprocess.CalledProcessError, ValueError):
+            probe = ffmpeg.probe(self.video_path)
+            video_stream = next(
+                (
+                    stream
+                    for stream in probe["streams"]
+                    if stream["codec_type"] == "video"
+                ),
+                None,
+            )
+            if video_stream is None:
+                return None
+
+            # Extract frame rate which might be in the format '24/1'
+            frame_rate = video_stream.get("r_frame_rate")
+            if frame_rate:
+                match = re.match(r"(\d+)/(\d+)", frame_rate)
+                if match:
+                    num, den = map(int, match.groups())
+                    return num / den
+            return None
+        except (ffmpeg.Error, KeyError, StopIteration, ValueError):
             return None
 
     def cleanup(self):
