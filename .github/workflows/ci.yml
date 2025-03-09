@@ -80,7 +80,7 @@ jobs:
       - name: Build package
         run: python -m build
       - name: Upload build artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: dist
           path: dist/
@@ -106,7 +106,7 @@ jobs:
         run: |
           pyinstaller --onefile --name pyplayer --add-data "pyplayer;pyplayer" pyplayer/__init__.py
       - name: Upload executable
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: pyplayer-windows
           path: dist/pyplayer.exe
