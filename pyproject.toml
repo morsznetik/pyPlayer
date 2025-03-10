@@ -10,8 +10,12 @@ dependencies = [
     "tqdm",
     "pre-commit",
     "ruff",
-    "ffmpeg-python>=0.2.0",
+    "ffmpeg-python",
+    "numpy",
 ]
 
 [project.scripts]
 pyplayer = "pyplayer:main"
+
+[tool.setuptools]
+packages = ["pyplayer"]
