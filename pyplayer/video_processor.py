@@ -48,26 +48,26 @@ class VideoProcessor:
         stream = ffmpeg.input(self.video_path)
 
         # Apply unsharp filter
-        stream = ffmpeg.filter(
-            stream,
-            "unsharp",
-            luma_msize_x=7,
-            luma_msize_y=7,
-            luma_amount=3,
-            chroma_msize_x=3,
-            chroma_msize_y=3,
-            chroma_amount=0,
-        )
+        # stream = ffmpeg.filter(
+        #     stream,
+        #     "unsharp",
+        #     luma_msize_x=7,
+        #     luma_msize_y=7,
+        #     luma_amount=3,
+        #     chroma_msize_x=3,
+        #     chroma_msize_y=3,
+        #     chroma_amount=0,
+        # )
         # Apply grayscale filter if requested
         if grayscale:
             # Apply the complex lutrgb filter
             lut_expr = "if(gte(val,0), if(gte(val,224), 255, if(gte(val,128), 192, if(gte(val,64), 128, 0))))"
-            stream = ffmpeg.filter(stream, "lutrgb", r=lut_expr, g=lut_expr, b=lut_expr)
+            stream = stream.filter("lutrgb", r=lut_expr, g=lut_expr, b=lut_expr)
             # Apply hue filter to remove saturation
-            stream = ffmpeg.filter(stream, "hue", s=0)
+            stream = stream.filter("hue", s=0)
 
         if color_smoothing:
-            stream = ffmpeg.filter(stream, "hqdn3d")
+            stream = stream.filter("hqdn3d")
 
         output_path = os.path.join(self.frames_dir, "frame_%05d.png")
         try:
