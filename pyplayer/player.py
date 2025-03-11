@@ -198,9 +198,9 @@ class Player:
                 (skipped_frames / total_frames) * 100 if total_frames > 0 else None
             )
 
-            def __calc[T, R](
+            def __calc[T, R: (int | float)](
                 vars: T, func: Callable[[T], R], factor: float
-            ) -> R | None:
+            ) -> float | None:
                 return func(vars) * factor if vars else None
 
             stats: dict[str, dict[str, float | None]] = {
