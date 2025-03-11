@@ -16,7 +16,7 @@ class ColorManager:
 
     @staticmethod
     def calculate_average_color(
-        colors: tuple[int, int, int],
+        colors: list[tuple[int, int, int]],
     ) -> tuple[int, int, int]:
         if not colors:
             return (0, 0, 0)
