@@ -21,6 +21,7 @@ class VideoProcessor:
     def process_video(self, grayscale=False, color_smoothing=False):
         """Process video file by extracting frames and audio"""
         try:
+            print(f"Processing video: {self.video_path} (This might take a bit...)")
             fps = self._get_video_fps()
             self._extract_audio()
             self._extract_frames(grayscale, color_smoothing)
