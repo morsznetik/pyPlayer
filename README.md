@@ -48,7 +48,7 @@ A powerful and performant terminal-based video player that renders videos as ASC
 ### Windows Standalone
 Pre-built executables available on the [releases page](https://github.com/morsznetik/pyPlayer/releases) or if you're feeling fancy you can also download it from the artifacts! (if you don't know what that is, you shouldn't worry about it:D).
 
-**Windows users: don't forget to (download FFmpeg)[https://ffmpeg.org/download.html] and add it to your PATH**
+**Windows users: don't forget to [download FFmpeg](https://ffmpeg.org/download.html) and add it to your PATH**
 
 *Note: Windows Defender might flag it due to PyInstaller packaging - this is a false positive. Also due to it not being signed, SmartScreen is complain*
 
