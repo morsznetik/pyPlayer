@@ -195,13 +195,15 @@ class Player:
             # statistics
             frames_played = total_frames - skipped_frames
             drop_rate: float | None = (
-                (skipped_frames / total_frames) * 100 if total_frames > 0 else "N/A"
+                (skipped_frames / total_frames) * 100 if total_frames > 0 else None
             )
 
-            def __calc[T, R](vars: T, func: Callable[[T], R], factor: R) -> R | str:
-                return func(vars) * factor if vars else "N/A"
+            def __calc[T, R](
+                vars: T, func: Callable[[T], R], factor: float
+            ) -> R | None:
+                return func(vars) * factor if vars else None
 
-            stats: dict[str, dict[str, float | str]] = {
+            stats: dict[str, dict[str, float | None]] = {
                 "FPS": {
                     "target": self.fps,
                     "avg": __calc(frame_times, lambda v: 1.0 / statistics.mean(v), 1.0),
@@ -230,7 +232,7 @@ class Player:
                 },
             }
 
-            percentiles: dict[int, float | str] = (
+            percentiles: dict[int, float | None] = (
                 {
                     p: __calc(
                         frame_times,
@@ -292,7 +294,7 @@ class Player:
             summary_content = [
                 "",
                 f"• Frames: {frames_played}/{total_frames}",
-                f"• Dropped: {skipped_frames} ({drop_rate:.1f}%)",
+                f"• Dropped: {skipped_frames} ({drop_rate and f'{drop_rate:.1f}%' or 'N/A'})"
                 f"• Target FPS: {self.fps:.1f}",
                 "",
             ]
@@ -315,7 +317,7 @@ class Player:
                     )
 
                 vals: list[str] = [
-                    f"{k.capitalize()}: {v if v == 'N/A' else f'{float(v):.1f}{unit}'}"
+                    f"{k.capitalize()}: {'N/A' if v is None else f'{float(v):.1f}{unit}'}"
                     for k, v in values.items()
                     if k != "target"
                 ]
@@ -325,7 +327,7 @@ class Player:
             latency_content: list[str] = [""]
             if percentiles:
                 percentile_vals: list[str] = [
-                    f"{p}th: {v if v == 'N/A' else f'{float(v):.1f}ms'}"
+                    f"{p}th: {'N/A' if v is None else f'{float(v):.1f}ms'}"
                     for p, v in sorted(percentiles.items())
                 ]
                 latency_content.append("Frame Time Percentiles:")
