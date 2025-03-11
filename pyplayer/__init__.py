@@ -1,6 +1,7 @@
 import os
 import sys
 import argparse
+import multiprocessing
 from pyplayer.player import Player
 
 
@@ -54,6 +55,13 @@ def main():
         action="store_true",
         help="Pre-render video frames, WILL TAKE UP A SIGNIFICANT AMOUNT OF RAM",
     )
+    parser.add_argument(
+        "--threads",
+        "-t",
+        type=int,
+        default=0,
+        help="Number of threads for frame rendering (default: number of CPU cores)",
+    )
 
     args = parser.parse_args()
 
@@ -75,6 +83,9 @@ def main():
             )
             sys.exit(1)
 
+    if args.threads <= 0:
+        args.threads = multiprocessing.cpu_count()
+
     try:
         # try to create and start the player
         player = Player(
@@ -90,6 +101,7 @@ def main():
             grayscale=args.grayscale,
             color_smoothing=args.color_smoothing,
             pre_render=args.pre_render,
+            num_threads=args.threads,
         )
         player.play()
     except Exception as e:

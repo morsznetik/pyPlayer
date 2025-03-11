@@ -25,6 +25,7 @@ class Player:
         grayscale: bool = False,
         color_smoothing: bool = False,
         pre_render: bool = False,
+        num_threads: int = 0,
     ) -> None:
         self.processor = VideoProcessor(video_path)
         self.frames_dir, self.audio_path, detected_fps = self.processor.process_video(
@@ -37,6 +38,7 @@ class Player:
         self.frame_skip = frame_skip
         self.debug = debug
         self.pre_render = pre_render
+        self.num_threads = num_threads
 
         self.renderer = AsciiRenderer(
             style=render_style, color=color, frame_color=frame_color
@@ -51,7 +53,7 @@ class Player:
             )
             term_size = os.get_terminal_size()
             self.pre_rendered_frames = self.renderer.pre_render_frames(
-                frame_files, term_size.columns, term_size.lines
+                frame_files, term_size.columns, term_size.lines, self.num_threads
             )
 
     def play(self) -> None:
@@ -127,7 +129,10 @@ class Player:
                         ascii_frame = self.pre_rendered_frames[frame_path]
                     else:
                         ascii_frame = self.renderer.convert_frame(
-                            frame_path, term_size.columns, term_size.lines
+                            frame_path,
+                            term_size.columns,
+                            term_size.lines,
+                            self.num_threads,
                         )
                 except Exception as e:
                     raise RuntimeError(f"Frame conversion failed: {str(e)}")

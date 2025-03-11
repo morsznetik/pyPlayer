@@ -16,6 +16,7 @@ a = Analysis(
     win_private_assemblies=False,
     cipher=block_cipher,
     noarchive=False,
+    python_options=['--disable-gil'],
 )
 
 pyz = PYZ(a.pure, a.zipped_data, cipher=block_cipher)
