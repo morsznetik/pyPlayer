@@ -4,6 +4,27 @@ import tempfile
 import shutil
 import ffmpeg
 import re
+import subprocess
+from shutil import which
+
+
+def check_ffmpeg_available():
+    """Check if FFmpeg is available on the system"""
+    # try using shutil.which first (checks if it's in PATH)
+    if which("ffmpeg") is not None:
+        return True
+
+    # if not found in PATH, try running ffmpeg command directly
+    try:
+        subprocess.run(
+            ["ffmpeg", "-version"],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            check=False,
+        )
+        return True
+    except (subprocess.SubprocessError, FileNotFoundError):
+        return False
 
 
 class VideoProcessor:
@@ -20,6 +41,13 @@ class VideoProcessor:
 
     def process_video(self, grayscale=False, color_smoothing=False):
         """Process video file by extracting frames and audio"""
+        if not check_ffmpeg_available():
+            raise RuntimeError(
+                "FFmpeg is not installed or not found in your PATH. "
+                "Please install FFmpeg (https://ffmpeg.org/download.html) "
+                "and make sure it's added to your PATH. for more info see README.MD"
+            )
+
         try:
             print(f"Processing video: {self.video_path} (This might take a bit...)")
             fps = self._get_video_fps()
