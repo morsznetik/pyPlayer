@@ -8,7 +8,7 @@ A powerful and performant terminal-based video player that renders videos as ASC
 - **default**: Detailed ASCII character set
   - Medium quality, fast rendering
   - Fastest terminal performance
-  - Decent color support (*will look blurry with higher resolution videos*)
+  - Decent color support (*will look blurry but is arguably the best*)
 - **legacy**: Simple ASCII character set
   - Low quality, fastest rendering
   - Fastest terminal performance
@@ -20,7 +20,7 @@ A powerful and performant terminal-based video player that renders videos as ASC
 - **braille**: Unicode 2x4 braille pattern rendering
   - Best quality, slow rendering
   - Slow terminal performance
-  - Very good color support (*recommended for high-complexity videos, not recommended with videos with low dynamic range*)
+  - Very good color support (*recommended for high-complexity videos, bad with videos with low dynamic range*)
 
 ### Color Support
 - Truecolor (Full RGB) rendering
@@ -43,10 +43,14 @@ A powerful and performant terminal-based video player that renders videos as ASC
 
 ### Requirements
 - Python 3.13+
+- FFmpeg
 
 ### Windows Standalone
-Pre-built executables available on the [releases page](https://github.com/morsznetik/pyPlayer/releases).
-*Note: Windows Defender might flag it due to PyInstaller packaging - this is a false positive.*
+Pre-built executables available on the [releases page](https://github.com/morsznetik/pyPlayer/releases) or if you're feeling fancy you can also download it from the artifacts! (if you don't know what that is, you shouldn't worry about it:D).
+
+**Windows users: don't forget to (download FFmpeg)[https://ffmpeg.org/download.html] and add it to your PATH**
+
+*Note: Windows Defender might flag it due to PyInstaller packaging - this is a false positive. Also due to it not being signed, SmartScreen is complain*
 
 ### From Source
 
@@ -130,9 +134,15 @@ pre-commit install
 - [ ] Fix pre-render mode issues when debug is enabled
 - [ ] Improve color smoothing algorithm
 - [ ] Improve CI/CD pipeline
-- [ ] Support for user-defined FFMPEG video filters
 - [ ] Support for playing Youtube videos straight from the URL
+- [ ] Transparency toggle
 
 ## Known Issues
 - [ ] Pre-render mode is bugged with debug's mode on-screen performance statistics
-- [ ] Some Windows environments using the executable will have issues trying to find the video path
+- [x] Some Windows environments using the executable will have issues trying to find the video path
+
+
+#### Goals for 1.0.0
+- [ ] Complete all TODO's
+- [ ] Fix all known issues
+- [ ] Support for user-defined FFMPEG video filters
