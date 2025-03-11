@@ -8,7 +8,11 @@ import re
 
 class VideoProcessor:
     def __init__(self, video_path):
-        self.video_path = video_path
+        self.video_path = (
+            os.path.isabs(video_path) and video_path or os.path.abspath(video_path)
+        )
+        if not os.path.exists(self.video_path):
+            raise FileNotFoundError(f"Video file not found: {self.video_path}")
         self.temp_dir = tempfile.mkdtemp(prefix="pyplayer_")
         self.frames_dir = os.path.join(self.temp_dir, "frames")
         self.audio_path = os.path.join(self.temp_dir, "audio.wav")
