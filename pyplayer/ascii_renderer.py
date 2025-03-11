@@ -1,7 +1,7 @@
 import sys
-from typing import List, Optional, Tuple
 from PIL import Image
 from abc import ABC, abstractmethod
+from tqdm import tqdm
 
 
 class ColorManager:
@@ -15,8 +15,8 @@ class ColorManager:
 
     @staticmethod
     def calculate_average_color(
-        colors: List[Tuple[int, int, int]],
-    ) -> Tuple[int, int, int]:
+        colors: tuple[int, int, int],
+    ) -> tuple[int, int, int]:
         if not colors:
             return (0, 0, 0)
         avg_r = sum(c[0] for c in colors) // len(colors)
@@ -27,7 +27,7 @@ class ColorManager:
 
 class BaseRenderer(ABC):
     def __init__(
-        self, color: bool = False, frame_color: Optional[Tuple[int, int, int]] = None
+        self, color: bool = False, frame_color: tuple[int, int, int] | None = None
     ):
         self.color = color
         self.frame_color = frame_color
@@ -50,7 +50,7 @@ class TextRenderer(BaseRenderer):
         self,
         ascii_chars: str,
         color: bool = False,
-        frame_color: Optional[Tuple[int, int, int]] = None,
+        frame_color: tuple[int, int, int] | None = None,
     ):
         super().__init__(color, frame_color)
         self.ascii_chars = ascii_chars
@@ -93,16 +93,16 @@ class TextRenderer(BaseRenderer):
 
 class BrailleRenderer(BaseRenderer):
     BRAILLE_PATTERN_BASE = 0x2800
-    DOT_MAPPING = [
-        (0, 0),
-        (1, 0),  # top dots
-        (0, 1),
-        (1, 1),  # middle dots
-        (0, 2),
-        (1, 2),  # bottom dots
-        (0, 3),
-        (1, 3),  # extended dots
-    ]
+    DOT_MAPPING = {
+        (0, 0): 0x01,  # top-left 1/1
+        (1, 0): 0x08,  # top-right 1/2
+        (0, 1): 0x02,  # middle-left 2/1
+        (1, 1): 0x10,  # middle-right 2/2
+        (0, 2): 0x04,  # bottom-left 3/1
+        (1, 2): 0x20,  # bottom-right 3/2
+        (0, 3): 0x40,  # lower-left 4/1
+        (1, 3): 0x80,  # lower-right 4/2
+    }
 
     def render(self, img: Image.Image, width: int, height: int) -> str:
         target_width = width * 2
@@ -150,17 +150,6 @@ class BrailleRenderer(BaseRenderer):
         color_pixels = list(color_img.convert("RGB").getdata())
         braille_text = []
 
-        dot_bit = {
-            (0, 0): 0x01,  # top-left 1/1
-            (1, 0): 0x08,  # top-right 1/2
-            (0, 1): 0x02,  # middle-left 2/1
-            (1, 1): 0x10,  # middle-right 2/2
-            (0, 2): 0x04,  # bottom-left 3/1
-            (1, 2): 0x20,  # bottom-right 3/2
-            (0, 3): 0x40,  # lower-left 4/1
-            (1, 3): 0x80,  # lower-right 4/2
-        }
-
         cols = width // 2
         rows = height // 4
         cols = max(1, cols)
@@ -186,7 +175,7 @@ class BrailleRenderer(BaseRenderer):
                             idx < len(gray_pixels)
                             and gray_pixels[idx] > threshold * 0.8
                         ):
-                            code |= dot_bit[(dx, dy)]
+                            code |= self.DOT_MAPPING[(dx, dy)]
                             active_dots.append(color_pixels[idx])
 
                 if active_dots:
@@ -218,7 +207,7 @@ class AsciiRenderer:
         self,
         style: str = "default",
         color: bool = False,
-        frame_color: Optional[Tuple[int, int, int]] = None,
+        frame_color: tuple[int, int, int] | None = None,
     ) -> None:
         if style == "braille":
             self.renderer = BrailleRenderer(color=color, frame_color=frame_color)
@@ -241,3 +230,17 @@ class AsciiRenderer:
     def convert_frame(self, image_path: str, width: int, height: int) -> str:
         with Image.open(image_path) as img:
             return self.renderer.render(img, width, height)
+
+    def pre_render_frames(
+        self, frame_paths: list[str], width: int, height: int
+    ) -> dict[str, str]:
+        pre_rendered_frames = {}
+
+        # progress bar for pre-rendering
+        for frame_path in tqdm(frame_paths, desc="Pre-rendering frames", unit="frame"):
+            with Image.open(frame_path) as img:
+                pre_rendered_frames[frame_path] = self.renderer.render(
+                    img, width, height
+                )
+
+        return pre_rendered_frames

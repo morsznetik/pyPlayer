@@ -24,6 +24,7 @@ class Player:
         frame_color: tuple[int, int, int] | None = None,
         grayscale: bool = False,
         color_smoothing: bool = False,
+        pre_render: bool = False,
     ) -> None:
         self.processor = VideoProcessor(video_path)
         self.frames_dir, self.audio_path, detected_fps = self.processor.process_video(
@@ -35,10 +36,23 @@ class Player:
         self.skip_threshold = skip_threshold
         self.frame_skip = frame_skip
         self.debug = debug
+        self.pre_render = pre_render
 
         self.renderer = AsciiRenderer(
             style=render_style, color=color, frame_color=frame_color
         )
+
+        self.pre_rendered_frames = {}
+        if self.pre_render:
+            frame_files = sorted(
+                os.path.join(self.frames_dir, f)
+                for f in os.listdir(self.frames_dir)
+                if f.endswith(".png")
+            )
+            term_size = os.get_terminal_size()
+            self.pre_rendered_frames = self.renderer.pre_render_frames(
+                frame_files, term_size.columns, term_size.lines
+            )
 
     def play(self) -> None:
         """Play the video with audio synchronization"""
@@ -108,9 +122,13 @@ class Player:
 
                 frame_start = time.perf_counter()
                 try:
-                    ascii_frame = self.renderer.convert_frame(
-                        frame_path, term_size.columns, term_size.lines
-                    )
+                    # Use pre-rendered frame if available, otherwise render on-the-fly
+                    if self.pre_render and frame_path in self.pre_rendered_frames:
+                        ascii_frame = self.pre_rendered_frames[frame_path]
+                    else:
+                        ascii_frame = self.renderer.convert_frame(
+                            frame_path, term_size.columns, term_size.lines
+                        )
                 except Exception as e:
                     raise RuntimeError(f"Frame conversion failed: {str(e)}")
                 frame_process_time = time.perf_counter() - frame_start

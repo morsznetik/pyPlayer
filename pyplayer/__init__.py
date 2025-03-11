@@ -48,6 +48,12 @@ def main():
         action="store_true",
         help="Apply color smoothing to video",
     )
+    parser.add_argument(
+        "--pre-render",
+        "-pr",
+        action="store_true",
+        help="Pre-render video frames, WILL TAKE UP A SIGNIFICANT AMOUNT OF RAM",
+    )
 
     args = parser.parse_args()
 
@@ -83,6 +89,7 @@ def main():
             frame_color=frame_color,
             grayscale=args.grayscale,
             color_smoothing=args.color_smoothing,
+            pre_render=args.pre_render,
         )
         player.play()
     except Exception as e:
