@@ -56,7 +56,7 @@ class TextRenderer(BaseRenderer):
         self.ascii_chars = ascii_chars
 
     def render(self, img: Image.Image, width: int, height: int) -> str:
-        img = img.resize((width, height))
+        img = img.resize((width, height), Image.LANCZOS)  # type: ignore
         intensity_range = 255 / (len(self.ascii_chars) - 1)
         return (
             self._render_color(img, intensity_range)
@@ -107,25 +107,10 @@ class BrailleRenderer(BaseRenderer):
     def render(self, img: Image.Image, width: int, height: int) -> str:
         target_width = width * 2
         target_height = height * 4
-        img = self._prepare_image(img, target_width, target_height)
+        img = img.resize((target_width, target_height), Image.LANCZOS)  # type: ignore
         gray_img = img.convert("L")
         threshold = self._calculate_otsu_threshold(gray_img)
         return self._convert_to_braille(img, gray_img, threshold)
-
-    def _prepare_image(
-        self, img: Image.Image, target_width: int, target_height: int
-    ) -> Image.Image:
-        orig_width, orig_height = img.size
-        scale = max(target_width / orig_width, target_height / orig_height)
-        new_width = int(orig_width * scale)
-        new_height = int(orig_height * scale)
-        img = img.resize((new_width, new_height), Image.LANCZOS)  # type: ignore
-
-        left = (new_width - target_width) // 2
-        top = (new_height - target_height) // 2
-        right = left + target_width
-        bottom = top + target_height
-        return img.crop((left, top, right, bottom))
 
     def _calculate_otsu_threshold(self, gray_img: Image.Image) -> int:
         hist = [0] * 256
