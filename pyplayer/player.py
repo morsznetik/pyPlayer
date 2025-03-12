@@ -135,7 +135,6 @@ class Player:
                             frame_path,
                             term_size.columns,
                             term_size.lines,
-                            self.num_threads,
                         )
                 except Exception as e:
                     raise RuntimeError(f"Frame conversion failed: {str(e)}")

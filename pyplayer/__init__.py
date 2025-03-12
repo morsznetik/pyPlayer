@@ -10,7 +10,12 @@ def main():
         description="Play video files in terminal with ASCII art and sound."
     )
     parser.add_argument("video_path", help="Path to the video file")
-    parser.add_argument("--fps", "-f", type=int, default=30, help="Frames per second")
+    parser.add_argument(
+        "--fps",
+        "-f",
+        type=int,
+        help="Frames per second (defaults to video's native FPS)",
+    )
     parser.add_argument(
         "--volume", "-v", type=int, default=100, help="Audio volume (0-100)"
     )
