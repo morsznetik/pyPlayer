@@ -2,13 +2,18 @@
 
 A powerful and performant terminal-based video player that renders videos as ASCII art with audio.
 
+## Contributing
+
+Contributions are very much welcome! Please open an issue or submit a pull request.
+
 ## Features
 
 ### Multiple ASCII Rendering Styles
+
 - **default**: Detailed ASCII character set
   - Medium quality, fast rendering
   - Fastest terminal performance
-  - Decent color support (*will look blurry but is arguably the best*)
+  - Decent color support (*will look blurry but is arguably the best with high-complexity videos*)
 - **legacy**: Simple ASCII character set
   - Low quality, fastest rendering
   - Fastest terminal performance
@@ -21,19 +26,25 @@ A powerful and performant terminal-based video player that renders videos as ASC
   - Best quality, slow rendering
   - Slow terminal performance
   - Very good color support (*recommended for high-complexity videos, bad with videos with low dynamic range*)
+- others **(these are very much unsupported and are deprecated!)**:
+  - **blockNoColor**: hacky way to have transparency with block rendering, as the name suggests best way to use it is without color
+  - **blockv2**: hacky way to only have pixel-based rendering with only the full block being used
 
 ### Color Support
+
 - Truecolor (Full RGB) rendering
 - Custom frame color options
 - Grayscale conversion
 
 ### Performance Optimizations
+
 - Adaptive frame skipping
 - Multi-threaded rendering
 - Pre-rendering capability (*Uses more RAM but enables smoother playback*)
 - Performance metrics and debugging information
 
 ### Video Processing
+
 - Automatic frame extraction
 - Audio synchronization
 - Color smoothing
@@ -41,16 +52,22 @@ A powerful and performant terminal-based video player that renders videos as ASC
 
 ## Installation
 
+> **Note**
+> This is just how I build it - but obviously you're open to try your own build with package manager etc.
+
 ### Requirements
+
 - Python 3.13+
 - FFmpeg
 
 ### Windows Standalone
+
 Pre-built executables available on the [releases page](https://github.com/morsznetik/pyPlayer/releases) or if you're feeling fancy you can also download it from the artifacts! (if you don't know what that is, you shouldn't worry about it:D).
 
 **Windows users: don't forget to [download FFmpeg](https://ffmpeg.org/download.html) and add it to your PATH**
 
-*Note: Windows Defender might flag it due to PyInstaller packaging - this is a false positive. Also due to it not being signed, SmartScreen is complain*
+> **Note**
+> Windows Defender *may* flag it due to PyInstaller packaging - this is a false positive. Also since the binary is unsigned, SmartScreen will complain.
 
 ### From Source
 
@@ -77,9 +94,11 @@ pyplayer video_path [options]
 ```
 
 #### Required Arguments
+
 - **video_path**: Path to the video file
 
 #### Optional Arguments
+
 - `--fps`, `-f`: Frames per second (default: 30) - will overwrite the video's fps
 - `--volume`, `-v`: Audio volume from 0-100 (default: 100)
 - `--render`, `-r`: ASCII render style (choices: default, legacy, blockNoColor, block, blockv2, braille)
@@ -119,30 +138,37 @@ uv pip install -e .
 ### Code Style
 
 This project uses:
+
 - **Ruff** for linting and formatting
 - **Pre-commit hooks** for code quality checks
 
 Install pre-commit hooks:
 
 ```zsh
-uv pip install pre-commit
 pre-commit install
+
+# That's it! Ruff will automatically run as well, you can also add PyRight, but I didn't feel like enforcing type checking on everything, especially when this is not even fully typed yet. But it does run in the CI to non-restrictively check already typed code
 ```
 
 ## TODO
-- [ ] Make a character space fill-to-color algorithm to theoretically allow up to 90 times more colors
+
+- in order of personal importance:
+
+- [ ] Fully type define the project
 - [ ] Fix pre-render mode issues when debug is enabled
 - [ ] Improve color smoothing algorithm
-- [ ] Improve CI/CD pipeline
-- [ ] Support for playing Youtube videos straight from the URL
 - [ ] Transparency toggle
+- [ ] Improve CI/CD pipeline
+- [ ] Support for playing Youtube videos straight from the URL - potentially something for 1.0, haven't decided yet
 
 ## Known Issues
+
 - [ ] Pre-render mode is bugged with debug's mode on-screen performance statistics
 - [x] Some Windows environments using the executable will have issues trying to find the video path
 
+### Goals for 1.0.0
 
-#### Goals for 1.0.0
 - [ ] Complete all TODO's
 - [ ] Fix all known issues
 - [ ] Support for user-defined FFMPEG video filters
+- [ ] Make a character space fill-to-color algorithm to theoretically allow up to 90 times more colors
