@@ -52,7 +52,7 @@ Contributions are very much welcome! Please open an issue or submit a pull reque
 
 ## Installation
 
-> **Note**
+> **Note**:
 > This is just how I build it - but obviously you're open to try your own build with package manager etc.
 
 ### Requirements
@@ -66,7 +66,7 @@ Pre-built executables available on the [releases page](https://github.com/morszn
 
 **Windows users: don't forget to [download FFmpeg](https://ffmpeg.org/download.html) and add it to your PATH**
 
-> **Note**
+> **Note**:
 > Windows Defender *may* flag it due to PyInstaller packaging - this is a false positive. Also since the binary is unsigned, SmartScreen will complain.
 
 ### From Source
