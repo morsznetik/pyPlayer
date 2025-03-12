@@ -228,7 +228,9 @@ class AsciiRenderer:
         sys.stdout.write("\033[?25h")
         sys.stdout.flush()
 
-    def convert_frame(self, image_path: str, width: int, height: int) -> str:
+    def convert_frame(
+        self, image_path: str, width: int, height: int, num_threads: int = 0
+    ) -> str:
         with Image.open(image_path) as img:
             return self.renderer.render(img, width, height)
 
