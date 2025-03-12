@@ -159,6 +159,9 @@ class Player:
                 sys.stdout.write("\033[H")
                 sys.stdout.write(ascii_frame)
 
+                if self.pre_render and frame_path in self.pre_rendered_frames:
+                    del self.pre_rendered_frames[frame_path]
+
                 if self.debug:
                     window_size = min(10, current_frame)
                     if window_size > 0:
