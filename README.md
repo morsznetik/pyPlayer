@@ -1,6 +1,7 @@
 # pyPlayer
 
 [![Test, build, deploy](https://github.com/morsznetik/pyPlayer/actions/workflows/ci.yml/badge.svg)](https://github.com/morsznetik/pyPlayer/actions/workflows/ci.yml)
+
 A powerful and performant terminal-based video player that renders videos as ASCII art with audio.
 
 ## Contributing
