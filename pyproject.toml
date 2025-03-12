@@ -8,10 +8,15 @@ dependencies = [
     "pillow",
     "pygame",
     "tqdm",
-    "pre-commit",
-    "ruff",
     "ffmpeg-python",
     "numpy",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pre-commit",
+    "ruff",
+    "pyright",
 ]
 
 [project.scripts]
@@ -19,3 +24,11 @@ pyplayer = "pyplayer:main"
 
 [tool.setuptools]
 packages = ["pyplayer"]
+
+[tool.pylsp-mypy]
+venv_path = ".venv"
+venv = "."
+
+[tool.pyright]
+typeCheckingMode = "strict"
+reportMissingImports = false
