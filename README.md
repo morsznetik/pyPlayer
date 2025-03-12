@@ -53,7 +53,7 @@ Contributions are very much welcome! Please open an issue or submit a pull reque
 ## Installation
 
 > **Note**:
-> This is just how I build it - but obviously you're open to try your own build with package manager etc.
+> This is just how I build it, just suggestions.
 
 ### Requirements
 
