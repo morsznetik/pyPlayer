@@ -146,6 +146,9 @@ uv pip install -e .
 
 ### Code Style
 
+> **Note**:
+> If you want to contribute, please use the provided pre-commit hooks to ensure code quality.
+
 This project uses:
 
 - **Ruff** for linting and formatting
@@ -163,12 +166,12 @@ That's it! Ruff will automatically run as well, you can also add PyRight, but I 
 
 - in order of personal importance:
 
-- [ ] Fully type define the project
+- [ ] Fully type define the project[^1]
 - [ ] Fix pre-render mode issues when debug is enabled
 - [ ] Improve color smoothing algorithm
-- [ ] Transparency toggle
+- [ ] Transparency toggle[^2]
 - [ ] Improve CI/CD pipeline
-- [ ] True*** multi-threaded parallelism
+- [ ] True[^3] multi-threaded parallelism[^4]
 - [ ] Support for playing Youtube videos straight from the URL - potentially something for 1.0, haven't decided yet
 
 ## Known Issues
@@ -183,3 +186,11 @@ That's it! Ruff will automatically run as well, you can also add PyRight, but I 
 - [ ] Fix all known issues
 - [ ] Support for user-defined FFMPEG video filters
 - [ ] Make a character space fill-to-color algorithm to theoretically allow up to 90 times more colors
+
+[^1]: Coming in 0.2.0-beta*, from that point pyright will be required and set on strict.
+
+[^2]: This is in theory possible, but would require a significant re-write of how the text rendering pipeline handles low brightness pixels. Maybe just setting the background to a pure black would work?
+
+[^3]: Possible only due to the fact you can disable the GIL in 3.13.
+
+[^4] Haven't decided if doing it in chunks on singular images or process a couple images ahead of time. Doing it in chunks would be more beneficial as a package, but it would lead to dramatically less friendly DX. Pipelining would have more latency with dynamic settings like the terminal size because they are rendered slightly ahead of time, and use more ram, I guess we could always throw out the rendered frames when the size changes. The buffer size could also be dynamic which would benefit lower-end devices. Batching is obvously the better option in terms of actual performance and latency per frame, but I'm not sure if it would benefit the CLI as a whole. As a comparison - Cinebench R23 uses batching while Cinebench R24 switched to pipelining, which is interesing.
