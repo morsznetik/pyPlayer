@@ -188,7 +188,7 @@ class Player:
                     max_width = term_size.columns - 4  # margin
 
                     current_line = ""
-                    debug_lines = []
+                    debug_lines: list[str] = []
 
                     for section in debug_sections:
                         if len(current_line) == 0:
@@ -266,7 +266,7 @@ class Player:
                         frame_times,
                         cast(
                             Callable[[list[float]], float],
-                            lambda v: np.percentile(v, p),
+                            lambda v: np.percentile(v, p),  # type: ignore[reportUnknownLambdaType, reportUnknownArgumentType]
                         ),
                         1000,
                     )
