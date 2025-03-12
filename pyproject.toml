@@ -1,6 +1,6 @@
 [project]
 name = "pyplayer"
-version = "0.1.0"
+version = "0.1.0"  # probably won't be updated and all versioning will be done through git tags
 description = "A terminal-based video player with ASCII art rendering"
 readme = "README.md"
 requires-python = ">=3.13"

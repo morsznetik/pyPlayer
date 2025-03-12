@@ -75,6 +75,9 @@ Pre-built executables available on the [releases page](https://github.com/morszn
 git clone https://github.com/morsznetik/pyPlayer
 cd pyPlayer
 uv pip install -e .
+
+# or alternatively:
+uv pip install git+https://github.com/morsznetik/pyPlayer.git
 ```
 
 ## Usage
@@ -117,6 +120,10 @@ pyplayer video_path [options]
 - `--pre-render`, `-pr`: Pre-render video frames (uses more RAM)
   *Not recommended, it will use a lot of RAM, but useful if you want to play a video at a large resolution or make the video play smoother if you do not have a powerful enough CPU. For a 3 minute long 853x226, colored, braille-rendered video I found it to use around 9GB of RAM, but it's still not a bad option if you want to play a video at a large resolution. (Currently bugged with debug's mode on-screen performance statistics.)*
 - `--threads`, `-t`: Number of threads for frame rendering (default: number of CPU cores)
+
+### Using as a Package
+
+PyPlayer can be used as a Python package in your own projects. Although created to mainly be used as a CLI, you can still import it into your projects and interact with someone of its various API's. Each part is created as a separate classes that handle different parts, so you can import them individually. Stuff you need is mostly in the base package, but some more internal stuff that still could be useful can be accessed throught importing different modules. You can check the source code for now.
 
 ## Development
 
