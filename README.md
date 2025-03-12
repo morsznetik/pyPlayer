@@ -146,9 +146,9 @@ Install pre-commit hooks:
 
 ```zsh
 pre-commit install
-
-# That's it! Ruff will automatically run as well, you can also add PyRight, but I didn't feel like enforcing type checking on everything, especially when this is not even fully typed yet. But it does run in the CI to non-restrictively check already typed code
 ```
+
+That's it! Ruff will automatically run as well, you can also add PyRight, but I didn't feel like enforcing type checking on everything, especially when this is not even fully typed yet. But it does run in the CI to non-restrictively check already typed code
 
 ## TODO
 
