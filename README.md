@@ -153,6 +153,8 @@ This project uses:
 
 - **Ruff** for linting and formatting
 - **Pre-commit hooks** for code quality checks
+- **PyRight** for type checking
+- **Typos** for spelling and grammar checks
 
 Install pre-commit hooks:
 
@@ -160,7 +162,7 @@ Install pre-commit hooks:
 pre-commit install
 ```
 
-That's it! Ruff will automatically run as well, you can also add PyRight, but I didn't feel like enforcing type checking on everything, especially when this is not even fully typed yet. But it does run in the CI to non-restrictively check already typed code
+That's it! Ruff and PyRight will automatically run as well.
 
 ## TODO
 
