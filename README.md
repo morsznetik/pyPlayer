@@ -187,7 +187,7 @@ That's it! Ruff will automatically run as well, you can also add PyRight, but I 
 - [ ] Support for user-defined FFMPEG video filters
 - [ ] Make a character space fill-to-color algorithm to theoretically allow up to 90 times more colors
 
-[^1]: Coming in 0.2.0-beta*, from that point pyright will be required and set on strict.
+[^1]: Coming in 0.2.0-beta*, from that point pyright will be required and set on strict, requiring you to type every function and non-implicit variable.
 
 [^2]: This is in theory possible, but would require a significant re-write of how the text rendering pipeline handles low brightness pixels. Maybe just setting the background to a pure black would work?
 
