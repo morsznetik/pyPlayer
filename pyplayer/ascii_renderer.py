@@ -1,5 +1,5 @@
 import sys
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from PIL import Image
 from abc import ABC, abstractmethod
 from tqdm import tqdm
@@ -228,48 +228,34 @@ class AsciiRenderer:
         sys.stdout.write("\033[?25h")
         sys.stdout.flush()
 
-    def convert_frame(
-        self, image_path: str, width: int, height: int, num_threads: int = 0
-    ) -> str:
-        def render_frame(img_path: str) -> str:
-            try:
-                with Image.open(img_path) as img:
-                    return self.renderer.render(img, width, height)
-            except Exception as e:
-                print(f"Error rendering frame {img_path}: {str(e)}")
-                return ""
-
-        with ThreadPoolExecutor(max_workers=num_threads) as executor:
-            future = executor.submit(render_frame, image_path)
-
-            try:
-                return future.result()
-            except Exception as e:
-                print(f"Exception while processing frame: {str(e)}")
-                return ""
+    def convert_frame(self, image_path: str, width: int, height: int) -> str:
+        with Image.open(image_path) as img:
+            return self.renderer.render(img, width, height)
 
     def pre_render_frames(
-        self, frame_paths: list[str], width: int, height: int, num_threads: int = 0
+        self, frame_paths: list[str], width: int, height: int, num_threads: int = 4
     ) -> dict[str, str]:
+        if not frame_paths:
+            return {}
+
+        num_threads = max(1, min(num_threads, len(frame_paths)))
         pre_rendered_frames = {}
 
         def render_frame(frame_path: str) -> tuple[str, str]:
             try:
                 with Image.open(frame_path) as img:
-                    rendered = self.renderer.render(img, width, height)
-                    return frame_path, rendered
+                    return frame_path, self.renderer.render(img, width, height)
             except Exception as e:
                 print(f"Error rendering frame {frame_path}: {str(e)}")
                 return frame_path, ""
 
         with ThreadPoolExecutor(max_workers=num_threads) as executor:
-            future_to_path = {
-                executor.submit(render_frame, path): path for path in frame_paths
-            }
+            futures = [executor.submit(render_frame, path) for path in frame_paths]
 
             for future in tqdm(
-                future_to_path,
-                desc=f"Pre-rendering frames (using {num_threads} threads)",
+                as_completed(futures),
+                total=len(futures),
+                desc=f"Pre-rendering frames ({num_threads} threads)",
                 unit="frame",
             ):
                 try:
@@ -277,6 +263,6 @@ class AsciiRenderer:
                     if rendered:
                         pre_rendered_frames[path] = rendered
                 except Exception as e:
-                    print(f"Exception while processing frame: {str(e)}")
+                    print(f"Exception during frame rendering: {str(e)}")
 
         return pre_rendered_frames

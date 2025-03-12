@@ -168,11 +168,13 @@ That's it! Ruff will automatically run as well, you can also add PyRight, but I 
 - [ ] Improve color smoothing algorithm
 - [ ] Transparency toggle
 - [ ] Improve CI/CD pipeline
+- [ ] True*** multi-threaded parallelism
 - [ ] Support for playing Youtube videos straight from the URL - potentially something for 1.0, haven't decided yet
 
 ## Known Issues
 
 - [ ] Pre-render mode is bugged with debug's mode on-screen performance statistics
+- [ ] Left-side transparency can cause glitchy rendering
 - [x] Some Windows environments using the executable will have issues trying to find the video path
 
 ### Goals for 1.0.0
