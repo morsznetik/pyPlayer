@@ -4,6 +4,8 @@ from PIL import Image
 from abc import ABC, abstractmethod
 from tqdm import tqdm
 
+type RGBPixel = tuple[int, int, int]
+
 
 class ColorManager:
     @staticmethod
@@ -16,8 +18,8 @@ class ColorManager:
 
     @staticmethod
     def calculate_average_color(
-        colors: list[tuple[int, int, int]],
-    ) -> tuple[int, int, int]:
+        colors: list[RGBPixel],
+    ) -> RGBPixel:
         if not colors:
             return (0, 0, 0)
         avg_r = sum(c[0] for c in colors) // len(colors)
@@ -27,9 +29,7 @@ class ColorManager:
 
 
 class BaseRenderer(ABC):
-    def __init__(
-        self, color: bool = False, frame_color: tuple[int, int, int] | None = None
-    ):
+    def __init__(self, color: bool = False, frame_color: RGBPixel | None = None):
         self.color = color
         self.frame_color = frame_color
 
@@ -51,7 +51,7 @@ class TextRenderer(BaseRenderer):
         self,
         ascii_chars: str,
         color: bool = False,
-        frame_color: tuple[int, int, int] | None = None,
+        frame_color: RGBPixel | None = None,
     ):
         super().__init__(color, frame_color)
         self.ascii_chars = ascii_chars
@@ -67,9 +67,11 @@ class TextRenderer(BaseRenderer):
 
     def _render_color(self, img: Image.Image, intensity_range: float) -> str:
         img = img.convert("RGB")
-        ascii_image = []
+        ascii_image: list[str] = []
 
-        for pixel in img.getdata():
+        pixel: RGBPixel
+        pixels: list[RGBPixel] = list(img.getdata())  # type: ignore
+        for pixel in pixels:
             r, g, b = pixel
             if r == g == b == 0:
                 ascii_image.append(" ")
@@ -83,10 +85,12 @@ class TextRenderer(BaseRenderer):
 
     def _render_grayscale(self, img: Image.Image, intensity_range: float) -> str:
         img = img.convert("L")
+
+        pixel_values: list[int] = list(img.getdata())  # type: ignore
         ascii_image = "".join(
             [
                 self.ascii_chars[int(pixel_value / intensity_range)]
-                for pixel_value in img.getdata()
+                for pixel_value in pixel_values
             ]
         )
         return self.apply_frame_color(ascii_image)
@@ -115,27 +119,29 @@ class BrailleRenderer(BaseRenderer):
 
     def _calculate_otsu_threshold(self, gray_img: Image.Image) -> int:
         hist = [0] * 256
-        for pixel in gray_img.getdata():
+        pixels: list[int] = list(gray_img.getdata())  # type: ignore
+        for pixel in pixels:
             hist[pixel] += 1
 
-        total = sum(hist)
-        sum_total = sum(i * hist[i] for i in range(256))
-        max_variance = 0.0
-        threshold = 128
+        total: int = sum(hist)
+        sum_total: int = sum(i * hist[i] for i in range(256))
+        max_variance: float = 0.0
+        threshold: int = 128
 
-        sum_b = w_b = 0
+        sum_b: int = 0
+        w_b: int = 0
         for i in range(256):
             w_b += hist[i]
             if w_b == 0:
                 continue
-            w_f = total - w_b
+            w_f: int = total - w_b
             if w_f == 0:
                 break
 
             sum_b += i * hist[i]
-            m_b = sum_b / w_b
-            m_f = (sum_total - sum_b) / w_f
-            variance = w_b * w_f * (m_b - m_f) ** 2
+            m_b: float = sum_b / w_b
+            m_f: float = (sum_total - sum_b) / w_f
+            variance: float = w_b * w_f * (m_b - m_f) ** 2
 
             if variance > max_variance:
                 max_variance = variance
@@ -147,31 +153,28 @@ class BrailleRenderer(BaseRenderer):
         self, color_img: Image.Image, gray_img: Image.Image, threshold: int
     ) -> str:
         width, height = gray_img.size
-        gray_pixels = list(gray_img.getdata())
-        color_pixels = list(color_img.convert("RGB").getdata())
-        braille_text = []
+        gray_pixels: list[int] = list(gray_img.getdata())  # type: ignore
+        color_pixels: list[RGBPixel] = list(color_img.convert("RGB").getdata())  # type: ignore
+        braille_text: list[str] = []
 
-        cols = width // 2
-        rows = height // 4
-        cols = max(1, cols)
-        rows = max(1, rows)
+        cols: int = max(1, width // 2)
+        rows: int = max(1, height // 4)
 
-        # >its 8am give me a break
         for y in range(rows):
-            row = []
+            row: list[str] = []
             for x in range(cols):
-                code = self.BRAILLE_PATTERN_BASE
-                active_dots = []
+                code: int = self.BRAILLE_PATTERN_BASE
+                active_dots: list[RGBPixel] = []
 
                 for dy in range(4):
                     for dx in range(2):
-                        px = x * 2 + dx
-                        py = y * 4 + dy
+                        px: int = x * 2 + dx
+                        py: int = y * 4 + dy
 
                         if px >= width or py >= height:
                             continue
-                        # TODO: wtf
-                        idx = py * width + px
+
+                        idx: int = py * width + px
                         if (
                             idx < len(gray_pixels)
                             and gray_pixels[idx] > threshold * 0.8
@@ -181,7 +184,9 @@ class BrailleRenderer(BaseRenderer):
 
                 if active_dots:
                     if self.color:
-                        avg_color = ColorManager.calculate_average_color(active_dots)
+                        avg_color: RGBPixel = ColorManager.calculate_average_color(
+                            active_dots
+                        )
                         row.append(
                             f"{ColorManager.rgb_to_ansi(*avg_color)}{chr(code)}{ColorManager.reset_color()}"
                         )
@@ -208,7 +213,7 @@ class AsciiRenderer:
         self,
         style: str = "default",
         color: bool = False,
-        frame_color: tuple[int, int, int] | None = None,
+        frame_color: RGBPixel | None = None,
     ) -> None:
         if style == "braille":
             self.renderer = BrailleRenderer(color=color, frame_color=frame_color)
@@ -239,7 +244,7 @@ class AsciiRenderer:
             return {}
 
         num_threads = max(1, min(num_threads, len(frame_paths)))
-        pre_rendered_frames = {}
+        pre_rendered_frames: dict[str, str] = {}
 
         def render_frame(frame_path: str) -> tuple[str, str]:
             try:
