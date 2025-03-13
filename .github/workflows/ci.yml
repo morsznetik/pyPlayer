@@ -41,8 +41,9 @@ jobs:
           uv pip install -e .
 
       - name: Run Pyright
-        uses: jakebailey/pyright-action@v1
+        uses: jakebailey/pyright-action@v2
         with:
+          version: 2.3.2
           working-directory: '.'
 
   # test:
