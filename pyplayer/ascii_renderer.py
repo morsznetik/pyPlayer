@@ -69,7 +69,6 @@ class TextRenderer(BaseRenderer):
         img = img.convert("RGB")
         ascii_image: list[str] = []
 
-        pixel: RGBPixel
         pixels: list[RGBPixel] = list(img.getdata())  # type: ignore
         for pixel in pixels:
             r, g, b = pixel
@@ -118,7 +117,7 @@ class BrailleRenderer(BaseRenderer):
         return self._convert_to_braille(img, gray_img, threshold)
 
     def _calculate_otsu_threshold(self, gray_img: Image.Image) -> int:
-        hist = [0] * 256
+        hist: list[int] = [0] * 256
         pixels: list[int] = list(gray_img.getdata())  # type: ignore
         for pixel in pixels:
             hist[pixel] += 1
@@ -184,9 +183,7 @@ class BrailleRenderer(BaseRenderer):
 
                 if active_dots:
                     if self.color:
-                        avg_color: RGBPixel = ColorManager.calculate_average_color(
-                            active_dots
-                        )
+                        avg_color = ColorManager.calculate_average_color(active_dots)
                         row.append(
                             f"{ColorManager.rgb_to_ansi(*avg_color)}{chr(code)}{ColorManager.reset_color()}"
                         )
