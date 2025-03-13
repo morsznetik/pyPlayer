@@ -188,6 +188,7 @@ That's it! Ruff will automatically run as well, you can also add PyRight, but I 
 - [ ] Fix all known issues
 - [ ] Support for user-defined FFMPEG video filters
 - [ ] Make a character space fill-to-color algorithm to theoretically allow up to 90 times more colors
+- [ ] Add video playback control with on-screen timestamps
 
 [^1]: Coming in 0.2.0-beta*, from that point pyright will be required and set on strict, requiring you to type every function and non-implicit variable.
 
