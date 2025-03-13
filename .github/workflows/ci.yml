@@ -43,8 +43,10 @@ jobs:
       - name: Run Pyright
         uses: jakebailey/pyright-action@v2
         with:
+          version: PATH
           working-directory: '.'
-          args: --project pyproject.toml --verbose
+          verbose: true
+          project: "pyproject.toml"
 
   # test:
   #   runs-on: ubuntu-latest

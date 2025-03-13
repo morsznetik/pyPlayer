@@ -17,6 +17,7 @@ dev = [
     "pre-commit",
     "ruff",
     "pyright",
+    "types-tqdm",
 ]
 
 [project.scripts]
