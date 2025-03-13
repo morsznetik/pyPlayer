@@ -6,9 +6,14 @@ import ffmpeg
 import re
 import subprocess
 from shutil import which
+from typing import Any
+
+type FFmpegInput = Any
+type FFmpegOutput = Any
+type FFmpegStream = Any
 
 
-def check_ffmpeg_available():
+def check_ffmpeg_available() -> bool:
     """Check if FFmpeg is available on the system"""
     # try using shutil.which first (checks if it's in PATH)
     if which("ffmpeg") is not None:
@@ -28,7 +33,7 @@ def check_ffmpeg_available():
 
 
 class VideoProcessor:
-    def __init__(self, video_path):
+    def __init__(self, video_path: str) -> None:
         self.video_path = (
             os.path.isabs(video_path) and video_path or os.path.abspath(video_path)
         )
@@ -39,7 +44,9 @@ class VideoProcessor:
         self.audio_path = os.path.join(self.temp_dir, "audio.wav")
         os.makedirs(self.frames_dir, exist_ok=True)
 
-    def process_video(self, grayscale=False, color_smoothing=False):
+    def process_video(
+        self, grayscale: bool = False, color_smoothing: bool = False
+    ) -> tuple[str, str, float | None]:
         """Process video file by extracting frames and audio"""
         if not check_ffmpeg_available():
             raise RuntimeError(
@@ -55,30 +62,34 @@ class VideoProcessor:
             self._extract_frames(grayscale, color_smoothing)
             return self.frames_dir, self.audio_path, fps
         except ffmpeg.Error as e:
-            raise RuntimeError(
-                f"Error processing video: {e.stderr.decode() if hasattr(e, 'stderr') else str(e)}"
-            )
+            stderr = getattr(e, "stderr", None)
+            error_msg = stderr.decode() if stderr else str(e)
+            raise RuntimeError(f"Error processing video: {error_msg}")
 
-    def _extract_audio(self):
+    def _extract_audio(self) -> None:
         """Extract audio from video file"""
         num_threads = multiprocessing.cpu_count()
         try:
-            (
-                ffmpeg.input(self.video_path)
-                .output(self.audio_path, q="0", map="a", threads=num_threads)
-                .run(capture_stdout=True, capture_stderr=True, overwrite_output=True)
+            input_stream: FFmpegInput = ffmpeg.input(self.video_path)  # type: ignore
+            output_stream: FFmpegOutput = input_stream.output(
+                self.audio_path, q="0", map="a", threads=num_threads
+            )  # type: ignore
+            output_stream.run(
+                capture_stdout=True, capture_stderr=True, overwrite_output=True
             )
         except ffmpeg.Error as e:
-            raise RuntimeError(
-                f"Error extracting audio: {e.stderr.decode() if hasattr(e, 'stderr') else str(e)}"
-            )
+            stderr = getattr(e, "stderr", None)
+            error_msg = stderr.decode() if stderr else str(e)
+            raise RuntimeError(f"Error extracting audio: {error_msg}")
 
-    def _extract_frames(self, grayscale=False, color_smoothing=False):
+    def _extract_frames(
+        self, grayscale: bool = False, color_smoothing: bool = False
+    ) -> None:
         """Extract and process frames from video file"""
         num_threads = multiprocessing.cpu_count()
 
         # Start with the base video input
-        stream = ffmpeg.input(self.video_path)
+        stream: FFmpegStream = ffmpeg.input(self.video_path)  # type: ignore
 
         # Apply unsharp filter
         # stream = ffmpeg.filter(
@@ -104,20 +115,21 @@ class VideoProcessor:
 
         output_path = os.path.join(self.frames_dir, "frame_%05d.png")
         try:
-            (
-                stream.output(output_path, threads=num_threads).run(
-                    capture_stdout=True, capture_stderr=True, overwrite_output=True
-                )
+            output_stream: FFmpegOutput = stream.output(
+                output_path, threads=num_threads
+            )
+            output_stream.run(
+                capture_stdout=True, capture_stderr=True, overwrite_output=True
             )
         except ffmpeg.Error as e:
-            raise RuntimeError(
-                f"Error extracting frames: {e.stderr.decode() if hasattr(e, 'stderr') else str(e)}"
-            )
+            stderr = getattr(e, "stderr", None)
+            error_msg = stderr.decode() if stderr else str(e)
+            raise RuntimeError(f"Error extracting frames: {error_msg}")
 
-    def _get_video_fps(self):
+    def _get_video_fps(self) -> float | None:
         """Get video frame rate using FFprobe"""
         try:
-            probe = ffmpeg.probe(self.video_path)
+            probe: dict[str, Any] = ffmpeg.probe(self.video_path)  # type: ignore
             video_stream = next(
                 (
                     stream
@@ -140,7 +152,7 @@ class VideoProcessor:
         except (ffmpeg.Error, KeyError, StopIteration, ValueError):
             return None
 
-    def cleanup(self):
+    def cleanup(self) -> None:
         """Remove temporary files and directories"""
         try:
             shutil.rmtree(self.temp_dir)
