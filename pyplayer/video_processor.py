@@ -7,6 +7,12 @@ import re
 import subprocess
 from shutil import which
 from typing import Any
+from .exceptions import (
+    VideoNotFoundError,
+    FFmpegNotFoundError,
+    AudioExtractionError,
+    FrameExtractionError,
+)
 
 type FFmpegInput = Any
 type FFmpegOutput = Any
@@ -38,7 +44,7 @@ class VideoProcessor:
             os.path.isabs(video_path) and video_path or os.path.abspath(video_path)
         )
         if not os.path.exists(self.video_path):
-            raise FileNotFoundError(f"Video file not found: {self.video_path}")
+            raise VideoNotFoundError(self.video_path)
         self.temp_dir = tempfile.mkdtemp(prefix="pyplayer_")
         self.frames_dir = os.path.join(self.temp_dir, "frames")
         self.audio_path = os.path.join(self.temp_dir, "audio.wav")
@@ -49,11 +55,7 @@ class VideoProcessor:
     ) -> tuple[str, str, float | None]:
         """Process video file by extracting frames and audio"""
         if not check_ffmpeg_available():
-            raise RuntimeError(
-                "FFmpeg is not installed or not found in your PATH. "
-                "Please install FFmpeg (https://ffmpeg.org/download.html) "
-                "and make sure it's added to your PATH. for more info see README.MD"
-            )
+            raise FFmpegNotFoundError()
 
         try:
             print(f"Processing video: {self.video_path} (This might take a bit...)")
@@ -64,7 +66,7 @@ class VideoProcessor:
         except ffmpeg.Error as e:
             stderr = getattr(e, "stderr", None)
             error_msg = stderr.decode() if stderr else str(e)
-            raise RuntimeError(f"Error processing video: {error_msg}")
+            raise FrameExtractionError(error_msg)
 
     def _extract_audio(self) -> None:
         """Extract audio from video file"""
@@ -80,7 +82,7 @@ class VideoProcessor:
         except ffmpeg.Error as e:
             stderr = getattr(e, "stderr", None)
             error_msg = stderr.decode() if stderr else str(e)
-            raise RuntimeError(f"Error extracting audio: {error_msg}")
+            raise AudioExtractionError(error_msg)
 
     def _extract_frames(
         self, grayscale: bool = False, color_smoothing: bool = False
@@ -124,7 +126,7 @@ class VideoProcessor:
         except ffmpeg.Error as e:
             stderr = getattr(e, "stderr", None)
             error_msg = stderr.decode() if stderr else str(e)
-            raise RuntimeError(f"Error extracting frames: {error_msg}")
+            raise FrameExtractionError(error_msg)
 
     def _get_video_fps(self) -> float | None:
         """Get video frame rate using FFprobe"""

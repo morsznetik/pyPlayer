@@ -11,6 +11,12 @@ import numpy as np
 from typing import Callable, cast
 from .video_processor import VideoProcessor
 from .ascii_renderer import AsciiRenderer
+from .exceptions import (
+    PyPlayerError,
+    FrameNotFoundError,
+    FrameRenderingError,
+    AudioPlaybackError,
+)
 
 
 class Player:
@@ -62,9 +68,12 @@ class Player:
     def play(self) -> None:
         """Play the video with audio synchronization"""
         try:
-            pygame.mixer.init()
-            pygame.mixer.music.load(self.audio_path)
-            pygame.mixer.music.set_volume(self.volume / 100.0)
+            try:
+                pygame.mixer.init()
+                pygame.mixer.music.load(self.audio_path)
+                pygame.mixer.music.set_volume(self.volume / 100.0)
+            except pygame.error as e:
+                raise AudioPlaybackError(str(e))
 
             self.renderer.hide_cursor()
             sys.stdout.write("\033[2J")
@@ -76,8 +85,10 @@ class Player:
             sys.stdout.write("\033[2J")
             pygame.mixer.music.stop()
             print("\nPlayback interrupted by user.")
+        except PyPlayerError as e:
+            print(f"\nError: {e.message}")
         except Exception as e:
-            print(f"\nError: {str(e)}")
+            print(f"\nUnexpected error: {str(e)}")
             traceback.print_exc()
         finally:
             pygame.mixer.quit()
@@ -121,9 +132,7 @@ class Player:
 
                 frame_path = frame_files[current_frame]
                 if not os.path.exists(frame_path):
-                    raise FileNotFoundError(
-                        f"Frame {current_frame} missing: {frame_path}"
-                    )
+                    raise FrameNotFoundError(current_frame, frame_path)
 
                 frame_start = time.perf_counter()
                 try:
@@ -136,8 +145,11 @@ class Player:
                             term_size.columns,
                             term_size.lines,
                         )
+                except FrameRenderingError as e:
+                    raise e
                 except Exception as e:
-                    raise RuntimeError(f"Frame conversion failed: {str(e)}")
+                    raise FrameRenderingError(frame_path, str(e))
+
                 frame_process_time = time.perf_counter() - frame_start
 
                 img_size = os.path.getsize(frame_path)

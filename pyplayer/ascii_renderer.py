@@ -3,6 +3,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from PIL import Image
 from abc import ABC, abstractmethod
 from tqdm import tqdm
+from .exceptions import InvalidRenderStyleError, FrameRenderingError
 
 type RGBPixel = tuple[int, int, int]
 
@@ -214,11 +215,13 @@ class AsciiRenderer:
     ) -> None:
         if style == "braille":
             self.renderer = BrailleRenderer(color=color, frame_color=frame_color)
-        else:
-            ascii_chars = self.ASCII_STYLES.get(style, self.ASCII_STYLES["default"])
+        elif style in self.ASCII_STYLES:
+            ascii_chars = self.ASCII_STYLES[style]
             self.renderer = TextRenderer(
                 ascii_chars, color=color, frame_color=frame_color
             )
+        else:
+            raise InvalidRenderStyleError(style)
 
     def hide_cursor(self) -> None:
         """Hide the terminal cursor"""
@@ -231,8 +234,11 @@ class AsciiRenderer:
         sys.stdout.flush()
 
     def convert_frame(self, image_path: str, width: int, height: int) -> str:
-        with Image.open(image_path) as img:
-            return self.renderer.render(img, width, height)
+        try:
+            with Image.open(image_path) as img:
+                return self.renderer.render(img, width, height)
+        except Exception as e:
+            raise FrameRenderingError(image_path, str(e))
 
     def pre_render_frames(
         self, frame_paths: list[str], width: int, height: int, num_threads: int = 4
@@ -248,8 +254,7 @@ class AsciiRenderer:
                 with Image.open(frame_path) as img:
                     return frame_path, self.renderer.render(img, width, height)
             except Exception as e:
-                print(f"Error rendering frame {frame_path}: {str(e)}")
-                return frame_path, ""
+                raise FrameRenderingError(frame_path, str(e))
 
         with ThreadPoolExecutor(max_workers=num_threads) as executor:
             futures = [executor.submit(render_frame, path) for path in frame_paths]

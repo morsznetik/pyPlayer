@@ -1,8 +1,8 @@
-import os
 import sys
 import argparse
 import multiprocessing
 from pyplayer.player import Player
+from pyplayer.exceptions import PyPlayerError
 
 
 def main():
@@ -58,44 +58,35 @@ def main():
         "--pre-render",
         "-pr",
         action="store_true",
-        help="Pre-render video frames, WILL TAKE UP A SIGNIFICANT AMOUNT OF RAM",
+        help="Pre-render video frames (uses more RAM)",
     )
     parser.add_argument(
         "--threads",
         "-t",
         type=int,
-        default=0,
-        help="Number of threads for frame rendering (default: number of CPU cores)",
+        default=multiprocessing.cpu_count(),
+        help="Number of threads for frame rendering",
     )
 
     args = parser.parse_args()
-
-    # Validate video file exists
-    if not os.path.isfile(args.video_path):
-        print(f"Error: Video file '{args.video_path}' not found.")
-        sys.exit(1)
 
     # Parse frame color if provided
     frame_color = None
     if args.frame_color:
         try:
-            frame_color = tuple(map(int, args.frame_color.split(",")))
-            if len(frame_color) != 3 or any(c < 0 or c > 255 for c in frame_color):
-                raise ValueError
+            r, g, b = map(int, args.frame_color.split(","))
+            if not all(0 <= c <= 255 for c in (r, g, b)):
+                print("Error: RGB values must be between 0 and 255")
+                sys.exit(1)
+            frame_color = (r, g, b)
         except ValueError:
-            print(
-                "Error: Frame color must be in the format R,G,B with values between 0 and 255."
-            )
+            print("Error: Frame color must be in the format R,G,B (e.g., 255,0,0)")
             sys.exit(1)
 
-    if args.threads <= 0:
-        args.threads = multiprocessing.cpu_count()
-
     try:
-        # try to create and start the player
         player = Player(
             video_path=args.video_path,
-            fps=args.fps,
+            fps=args.fps or 30,  # Default to 30 if not specified
             volume=args.volume,
             render_style=args.render,
             skip_threshold=args.skip_threshold,
@@ -109,8 +100,14 @@ def main():
             num_threads=args.threads,
         )
         player.play()
+    except PyPlayerError as e:
+        print(f"Error: {e.message}")
+        sys.exit(1)
+    except KeyboardInterrupt:
+        print("\nPlayback interrupted by user.")
+        sys.exit(0)
     except Exception as e:
-        print(f"\nUnexpected error while creating Player or playing: {str(e)}")
+        print(f"Unexpected error: {str(e)}")
         sys.exit(1)
 
 
