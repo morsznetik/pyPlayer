@@ -8,7 +8,7 @@ import pygame
 import traceback
 import statistics
 import numpy as np
-from typing import Callable, cast
+from typing import Callable
 from .video_processor import VideoProcessor
 from .ascii_renderer import AsciiRenderer
 from .exceptions import (
@@ -276,10 +276,7 @@ class Player:
                 {
                     p: __calc(
                         frame_times,
-                        cast(
-                            Callable[[list[float]], float],
-                            lambda v: float(np.percentile(v, p)),  # type: ignore
-                        ),
+                        lambda v: float(np.percentile(v, p)),  # type: ignore
                         1000,
                     )
                     for p in [90, 95, 99]

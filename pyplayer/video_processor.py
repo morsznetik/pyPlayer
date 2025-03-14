@@ -6,7 +6,7 @@ import ffmpeg
 import re
 import subprocess
 from shutil import which
-from typing import Any, cast
+from typing import Any, TypeVar
 from .exceptions import (
     VideoNotFoundError,
     FFmpegNotFoundError,
@@ -14,9 +14,11 @@ from .exceptions import (
     FrameExtractionError,
 )
 
-type FFmpegInput = Any
-type FFmpegOutput = Any
-type FFmpegStream = Any
+T = TypeVar("T")
+type FFmpegInput = Any  # ffmpeg.input return type
+type FFmpegOutput = Any  # output stream type
+type FFmpegStream = Any  # stream type
+type FFmpegProbeResult = dict[str, Any]  # ffmpeg.probe return type
 
 
 def check_ffmpeg_available() -> bool:
@@ -72,12 +74,9 @@ class VideoProcessor:
         """Extract audio from video file"""
         num_threads = multiprocessing.cpu_count()
         try:
-            input_stream = cast(FFmpegInput, ffmpeg.input(self.video_path))
-            output_stream = cast(
-                FFmpegOutput,
-                input_stream.output(
-                    self.audio_path, q="0", map="a", threads=num_threads
-                ),
+            input_stream: FFmpegInput = ffmpeg.input(self.video_path)
+            output_stream: FFmpegOutput = input_stream.output(
+                self.audio_path, q="0", map="a", threads=num_threads
             )
             output_stream.run(
                 capture_stdout=True, capture_stderr=True, overwrite_output=True
@@ -94,7 +93,7 @@ class VideoProcessor:
         num_threads = multiprocessing.cpu_count()
 
         # Start with the base video input
-        stream = cast(FFmpegStream, ffmpeg.input(self.video_path))
+        stream: FFmpegStream = ffmpeg.input(self.video_path)
 
         # Apply grayscale filter if requested
         if grayscale:
@@ -109,8 +108,8 @@ class VideoProcessor:
 
         output_path = os.path.join(self.frames_dir, "frame_%05d.png")
         try:
-            output_stream = cast(
-                FFmpegOutput, stream.output(output_path, threads=num_threads)
+            output_stream: FFmpegOutput = stream.output(
+                output_path, threads=num_threads
             )
             output_stream.run(
                 capture_stdout=True, capture_stderr=True, overwrite_output=True
@@ -123,7 +122,7 @@ class VideoProcessor:
     def _get_video_fps(self) -> float | None:
         """Get video frame rate using FFprobe"""
         try:
-            probe = cast(dict[str, Any], ffmpeg.probe(self.video_path))
+            probe: FFmpegProbeResult = ffmpeg.probe(self.video_path)
             video_stream = next(
                 (
                     stream

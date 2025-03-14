@@ -2,11 +2,15 @@ import sys
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from PIL import Image
 from abc import ABC, abstractmethod
-from typing import override
+from typing import override, Sequence, TypeVar
 from tqdm import tqdm
 from .exceptions import InvalidRenderStyleError, FrameRenderingError
 
 type RGBPixel = tuple[int, int, int]
+type GrayscalePixel = int
+type RGBPixelSequence = Sequence[RGBPixel]
+type GrayscalePixelSequence = Sequence[GrayscalePixel]
+T = TypeVar("T")
 
 
 class ColorManager:
@@ -72,7 +76,7 @@ class TextRenderer(BaseRenderer):
         img = img.convert("RGB")
         ascii_image: list[str] = []
 
-        pixels: list[RGBPixel] = list(img.getdata())  # type: ignore
+        pixels: RGBPixelSequence = list(img.getdata())
         for pixel in pixels:
             r, g, b = pixel
             if r == g == b == 0:
@@ -88,7 +92,7 @@ class TextRenderer(BaseRenderer):
     def _render_grayscale(self, img: Image.Image, intensity_range: float) -> str:
         img = img.convert("L")
 
-        pixel_values: list[int] = list(img.getdata())  # type: ignore
+        pixel_values: GrayscalePixelSequence = list(img.getdata())
         ascii_image = "".join(
             [
                 self.ascii_chars[int(pixel_value / intensity_range)]
@@ -122,7 +126,7 @@ class BrailleRenderer(BaseRenderer):
 
     def _calculate_otsu_threshold(self, gray_img: Image.Image) -> int:
         hist: list[int] = [0] * 256
-        pixels: list[int] = list(gray_img.getdata())  # type: ignore
+        pixels: GrayscalePixelSequence = list(gray_img.getdata())
         for pixel in pixels:
             hist[pixel] += 1
 
@@ -156,8 +160,8 @@ class BrailleRenderer(BaseRenderer):
         self, color_img: Image.Image, gray_img: Image.Image, threshold: int
     ) -> str:
         width, height = gray_img.size
-        gray_pixels: list[int] = list(gray_img.getdata())  # type: ignore
-        color_pixels: list[RGBPixel] = list(color_img.convert("RGB").getdata())  # type: ignore
+        gray_pixels: GrayscalePixelSequence = list(gray_img.getdata())
+        color_pixels: RGBPixelSequence = list(color_img.convert("RGB").getdata())
         braille_text: list[str] = []
 
         cols: int = max(1, width // 2)
