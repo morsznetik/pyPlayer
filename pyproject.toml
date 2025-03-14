@@ -34,3 +34,4 @@ venv = "."
 typeCheckingMode = "strict"
 reportMissingImports = false
 reportMissingTypeStubs = false
+useLibraryCodeForTypes = true
