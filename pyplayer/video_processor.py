@@ -6,7 +6,7 @@ import ffmpeg
 import re
 import subprocess
 from shutil import which
-from typing import Any
+from typing import Any, cast
 from .exceptions import (
     VideoNotFoundError,
     FFmpegNotFoundError,
@@ -72,10 +72,13 @@ class VideoProcessor:
         """Extract audio from video file"""
         num_threads = multiprocessing.cpu_count()
         try:
-            input_stream: FFmpegInput = ffmpeg.input(self.video_path)  # type: ignore
-            output_stream: FFmpegOutput = input_stream.output(
-                self.audio_path, q="0", map="a", threads=num_threads
-            )  # type: ignore
+            input_stream = cast(FFmpegInput, ffmpeg.input(self.video_path))
+            output_stream = cast(
+                FFmpegOutput,
+                input_stream.output(
+                    self.audio_path, q="0", map="a", threads=num_threads
+                ),
+            )
             output_stream.run(
                 capture_stdout=True, capture_stderr=True, overwrite_output=True
             )
@@ -91,19 +94,8 @@ class VideoProcessor:
         num_threads = multiprocessing.cpu_count()
 
         # Start with the base video input
-        stream: FFmpegStream = ffmpeg.input(self.video_path)  # type: ignore
+        stream = cast(FFmpegStream, ffmpeg.input(self.video_path))
 
-        # Apply unsharp filter
-        # stream = ffmpeg.filter(
-        #     stream,
-        #     "unsharp",
-        #     luma_msize_x=7,
-        #     luma_msize_y=7,
-        #     luma_amount=3,
-        #     chroma_msize_x=3,
-        #     chroma_msize_y=3,
-        #     chroma_amount=0,
-        # )
         # Apply grayscale filter if requested
         if grayscale:
             # Apply the complex lutrgb filter
@@ -117,8 +109,8 @@ class VideoProcessor:
 
         output_path = os.path.join(self.frames_dir, "frame_%05d.png")
         try:
-            output_stream: FFmpegOutput = stream.output(
-                output_path, threads=num_threads
+            output_stream = cast(
+                FFmpegOutput, stream.output(output_path, threads=num_threads)
             )
             output_stream.run(
                 capture_stdout=True, capture_stderr=True, overwrite_output=True
@@ -131,7 +123,7 @@ class VideoProcessor:
     def _get_video_fps(self) -> float | None:
         """Get video frame rate using FFprobe"""
         try:
-            probe: dict[str, Any] = ffmpeg.probe(self.video_path)  # type: ignore
+            probe = cast(dict[str, Any], ffmpeg.probe(self.video_path))
             video_stream = next(
                 (
                     stream
@@ -158,5 +150,5 @@ class VideoProcessor:
         """Remove temporary files and directories"""
         try:
             shutil.rmtree(self.temp_dir)
-        except Exception as e:
+        except (OSError, IOError) as e:
             print(f"Warning: Failed to cleanup temporary files: {e}")

@@ -32,8 +32,8 @@ class FFmpegNotFoundError(VideoProcessingError):
     def __init__(self) -> None:
         super().__init__(
             "FFmpeg is not installed or not found in your PATH. "
-            "Please install FFmpeg (https://ffmpeg.org/download.html) "
-            "and make sure it's added to your PATH. For more info see README.md"
+            + "Please install FFmpeg (https://ffmpeg.org/download.html) "
+            + "and make sure it's added to your PATH. For more info see README.md"
         )
 
 

@@ -2,6 +2,7 @@ import sys
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from PIL import Image
 from abc import ABC, abstractmethod
+from typing import override
 from tqdm import tqdm
 from .exceptions import InvalidRenderStyleError, FrameRenderingError
 
@@ -57,6 +58,7 @@ class TextRenderer(BaseRenderer):
         super().__init__(color, frame_color)
         self.ascii_chars = ascii_chars
 
+    @override
     def render(self, img: Image.Image, width: int, height: int) -> str:
         img = img.resize((width, height), Image.Resampling.LANCZOS)  # type: ignore
         intensity_range = 255 / (len(self.ascii_chars) - 1)
@@ -109,6 +111,7 @@ class BrailleRenderer(BaseRenderer):
         (1, 3): 0x80,  # lower-right 4/2
     }
 
+    @override
     def render(self, img: Image.Image, width: int, height: int) -> str:
         target_width = width * 2
         target_height = height * 4

@@ -278,7 +278,7 @@ class Player:
                         frame_times,
                         cast(
                             Callable[[list[float]], float],
-                            lambda v: np.percentile(v, p),  # type: ignore[reportUnknownLambdaType, reportUnknownArgumentType]
+                            lambda v: float(np.percentile(v, p)),  # type: ignore
                         ),
                         1000,
                     )
@@ -335,7 +335,7 @@ class Player:
                 "",
                 f"• Frames: {frames_played}/{total_frames}",
                 f"• Dropped: {skipped_frames} ({drop_rate and f'{drop_rate:.1f}%' or 'N/A'})"
-                f"• Target FPS: {self.fps:.1f}",
+                + f"• Target FPS: {self.fps:.1f}",
                 "",
             ]
 
