@@ -169,7 +169,7 @@ That's it! Ruff and PyRight will automatically run as well.
 - in order of personal importance:
 
 - [x] Fully type define the project[^1]
-- [ ] Custom error handling
+- [x] Custom error handling
 - [ ] Fix pre-render mode issues when debug is enabled
 - [ ] Improve color smoothing algorithm
 - [ ] Transparency toggle[^2]
