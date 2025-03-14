@@ -110,7 +110,7 @@ class Player:
         sync_offsets: list[float] = []
         throughput_rates: list[float] = []
 
-        frame_files: list[str] = sorted(
+        frame_files = sorted(
             os.path.join(self.frames_dir, f)
             for f in os.listdir(self.frames_dir)
             if f.endswith(".png")
@@ -200,7 +200,7 @@ class Player:
                     max_width = term_size.columns - 4  # margin
 
                     current_line = ""
-                    debug_lines: list[str] = []
+                    debug_lines = [""]
 
                     for section in debug_sections:
                         if len(current_line) == 0:
@@ -234,7 +234,7 @@ class Player:
 
             # statistics
             frames_played = total_frames - skipped_frames
-            drop_rate: float | None = (
+            drop_rate = (
                 (skipped_frames / total_frames) * 100 if total_frames > 0 else None
             )
 
@@ -272,11 +272,11 @@ class Player:
                 },
             }
 
-            percentiles: dict[int, float | None] = (
+            percentiles = (
                 {
                     p: __calc(
                         frame_times,
-                        lambda v: float(np.percentile(v, p)),  # type: ignore
+                        lambda v: float(np.percentile(v, p)),
                         1000,
                     )
                     for p in [90, 95, 99]
@@ -336,7 +336,7 @@ class Player:
                 "",
             ]
 
-            perf_content: list[str] = [""]
+            perf_content = [""]
             for metric, values in stats.items():
                 unit = (
                     "ms"
@@ -361,9 +361,9 @@ class Player:
                 perf_content.append(f"  {' | '.join(vals)}")
                 perf_content.append("")
 
-            latency_content: list[str] = [""]
+            latency_content = [""]
             if percentiles:
-                percentile_vals: list[str] = [
+                percentile_vals = [
                     f"{p}th: {'N/A' if v is None else f'{float(v):.1f}ms'}"
                     for p, v in sorted(percentiles.items())
                 ]
@@ -377,7 +377,7 @@ class Player:
                 draw_box("LATENCY ANALYSIS", latency_content) if percentiles else []
             )
 
-            all_lines: list[str] = []
+            all_lines = [""]
             for line in (
                 summary_box
                 + [""]

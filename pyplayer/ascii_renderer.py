@@ -24,7 +24,7 @@ class ColorManager:
 
     @staticmethod
     def calculate_average_color(
-        colors: list[RGBPixel],
+        colors: RGBPixelSequence,
     ) -> RGBPixel:
         if not colors:
             return (0, 0, 0)
@@ -64,7 +64,7 @@ class TextRenderer(BaseRenderer):
 
     @override
     def render(self, img: Image.Image, width: int, height: int) -> str:
-        img = img.resize((width, height), Image.Resampling.LANCZOS)  # type: ignore
+        img = img.resize((width, height), Image.Resampling.LANCZOS)
         intensity_range = 255 / (len(self.ascii_chars) - 1)
         return (
             self._render_color(img, intensity_range)
@@ -125,30 +125,30 @@ class BrailleRenderer(BaseRenderer):
         return self._convert_to_braille(img, gray_img, threshold)
 
     def _calculate_otsu_threshold(self, gray_img: Image.Image) -> int:
-        hist: list[int] = [0] * 256
+        hist = [0] * 256
         pixels: GrayscalePixelSequence = list(gray_img.getdata())
         for pixel in pixels:
             hist[pixel] += 1
 
-        total: int = sum(hist)
-        sum_total: int = sum(i * hist[i] for i in range(256))
-        max_variance: float = 0.0
-        threshold: int = 128
+        total = sum(hist)
+        sum_total = sum(i * hist[i] for i in range(256))
+        max_variance = 0.0
+        threshold = 128
 
-        sum_b: int = 0
-        w_b: int = 0
+        sum_b = 0
+        w_b = 0
         for i in range(256):
             w_b += hist[i]
             if w_b == 0:
                 continue
-            w_f: int = total - w_b
+            w_f = total - w_b
             if w_f == 0:
                 break
 
             sum_b += i * hist[i]
-            m_b: float = sum_b / w_b
-            m_f: float = (sum_total - sum_b) / w_f
-            variance: float = w_b * w_f * (m_b - m_f) ** 2
+            m_b = sum_b / w_b
+            m_f = (sum_total - sum_b) / w_f
+            variance = w_b * w_f * (m_b - m_f) ** 2
 
             if variance > max_variance:
                 max_variance = variance
@@ -164,19 +164,19 @@ class BrailleRenderer(BaseRenderer):
         color_pixels: RGBPixelSequence = list(color_img.convert("RGB").getdata())
         braille_text: list[str] = []
 
-        cols: int = max(1, width // 2)
-        rows: int = max(1, height // 4)
+        cols = max(1, width // 2)
+        rows = max(1, height // 4)
 
         for y in range(rows):
             row: list[str] = []
             for x in range(cols):
-                code: int = self.BRAILLE_PATTERN_BASE
-                active_dots: list[RGBPixel] = []
+                code = self.BRAILLE_PATTERN_BASE
+                active_dots: RGBPixelSequence = []
 
                 for dy in range(4):
                     for dx in range(2):
-                        px: int = x * 2 + dx
-                        py: int = y * 4 + dy
+                        px = x * 2 + dx
+                        py = y * 4 + dy
 
                         if px >= width or py >= height:
                             continue
