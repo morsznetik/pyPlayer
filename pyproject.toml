@@ -16,7 +16,7 @@ dependencies = [
 dev = [
     "pre-commit",
     "ruff",
-    "pyright",
+    "basedpyright",
     "types-tqdm",
 ]
 
@@ -30,8 +30,8 @@ packages = ["pyplayer"]
 venv_path = ".venv"
 venv = "."
 
-[tool.pyright]
-typeCheckingMode = "strict"
+[tool.basedpyright]
+typeCheckingMode = "recommended"
 reportMissingImports = false
 reportMissingTypeStubs = false
 useLibraryCodeForTypes = true
