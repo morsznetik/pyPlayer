@@ -2,14 +2,15 @@ import sys
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from PIL import Image
 from abc import ABC, abstractmethod
+from collections.abc import Sequence
 from typing import override
 from tqdm import tqdm
 from .exceptions import InvalidRenderStyleError, FrameRenderingError
 
 type RGBPixel = tuple[int, int, int]
 type GrayscalePixel = int
-type RGBPixelSequence = list[RGBPixel]
-type GrayscalePixelSequence = list[GrayscalePixel]
+type RGBPixelSequence = Sequence[RGBPixel]
+type GrayscalePixelSequence = Sequence[GrayscalePixel]
 
 
 class ColorManager:
