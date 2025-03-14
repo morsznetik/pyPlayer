@@ -33,19 +33,15 @@ jobs:
 
       - name: Setup virtual environment
         run: |
-          uv venv
           source .venv/bin/activate
 
       - name: Install dependencies
         run: |
-          uv pip install -r pyproject.toml --all-extras
+          uv pip install .[dev]
 
       - name: Run Pyright
-        uses: jakebailey/pyright-action@v2
-        with:
-          working-directory: '.'
-          verbose: true
-          project: "pyproject.toml"
+        run: |
+          .venv/bin/python -m pyright
 
   # test:
   #   runs-on: ubuntu-latest
