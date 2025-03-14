@@ -6,7 +6,7 @@ import ffmpeg
 import re
 import subprocess
 from shutil import which
-from typing import Any, TypeVar
+from typing import Any
 from .exceptions import (
     VideoNotFoundError,
     FFmpegNotFoundError,
@@ -14,14 +14,13 @@ from .exceptions import (
     FrameExtractionError,
 )
 
-T = TypeVar("T")
 type FFmpegInput = Any  # ffmpeg.input return type
 type FFmpegOutput = Any  # output stream type
 type FFmpegStream = Any  # stream type
 type FFmpegProbeResult = dict[str, Any]  # ffmpeg.probe return type
 
 
-def check_ffmpeg_available() -> bool:
+def check_ffmpeg_available() -> list:
     """Check if FFmpeg is available on the system"""
     # try using shutil.which first (checks if it's in PATH)
     if which("ffmpeg") is not None:
