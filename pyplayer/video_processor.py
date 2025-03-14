@@ -20,7 +20,7 @@ type FFmpegStream = Any  # stream type
 type FFmpegProbeResult = dict[str, Any]  # ffmpeg.probe return type
 
 
-def check_ffmpeg_available() -> list:
+def check_ffmpeg_available() -> bool:
     """Check if FFmpeg is available on the system"""
     # try using shutil.which first (checks if it's in PATH)
     if which("ffmpeg") is not None:
