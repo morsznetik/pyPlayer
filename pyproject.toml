@@ -35,3 +35,6 @@ typeCheckingMode = "recommended"
 reportMissingImports = false
 reportMissingTypeStubs = false
 useLibraryCodeForTypes = true
+reportAny = false
+reportExplicitAny = false
+reportUnannotatedClassAttribute = false

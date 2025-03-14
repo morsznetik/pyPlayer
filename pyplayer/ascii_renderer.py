@@ -58,7 +58,7 @@ class TextRenderer(BaseRenderer):
         self.ascii_chars = ascii_chars
 
     def render(self, img: Image.Image, width: int, height: int) -> str:
-        img = img.resize((width, height), Image.LANCZOS)  # type: ignore
+        img = img.resize((width, height), Image.Resampling.LANCZOS)  # type: ignore
         intensity_range = 255 / (len(self.ascii_chars) - 1)
         return (
             self._render_color(img, intensity_range)
@@ -112,7 +112,7 @@ class BrailleRenderer(BaseRenderer):
     def render(self, img: Image.Image, width: int, height: int) -> str:
         target_width = width * 2
         target_height = height * 4
-        img = img.resize((target_width, target_height), Image.LANCZOS)  # type: ignore
+        img = img.resize((target_width, target_height), Image.Resampling.LANCZOS)
         gray_img = img.convert("L")
         threshold = self._calculate_otsu_threshold(gray_img)
         return self._convert_to_braille(img, gray_img, threshold)
