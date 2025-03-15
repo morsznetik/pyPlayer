@@ -83,6 +83,7 @@ def main():
             print("Error: Frame color must be in the format R,G,B (e.g., 255,0,0)")
             sys.exit(1)
 
+    player = None
     try:
         player = Player(
             video_path=args.video_path,
@@ -109,6 +110,9 @@ def main():
     except Exception as e:
         print(f"Unexpected error: {str(e)}")
         sys.exit(1)
+    finally:
+        if player:
+            player.processor.cleanup()
 
 
 if __name__ == "__main__":
