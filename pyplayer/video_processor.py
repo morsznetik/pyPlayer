@@ -146,7 +146,12 @@ class VideoProcessor:
 
     def cleanup(self) -> None:
         """Remove temporary files and directories"""
-        try:
-            shutil.rmtree(self.temp_dir)
-        except (OSError, IOError) as e:
-            print(f"Warning: Failed to cleanup temporary files: {e}")
+        is_cleanup = hasattr(self, "_cleanup_done")
+        if not is_cleanup and os.path.exists(self.temp_dir):
+            try:
+                shutil.rmtree(self.temp_dir)
+                self._cleanup_done = True
+            except (OSError, IOError) as e:
+                print(f"Warning: Failed to cleanup temporary files: {e}")
+        elif is_cleanup:
+            pass
