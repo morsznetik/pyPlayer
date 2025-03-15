@@ -16,6 +16,7 @@ from .exceptions import (
     FrameNotFoundError,
     FrameRenderingError,
     AudioPlaybackError,
+    VideoProcessingError,
 )
 
 
@@ -23,7 +24,7 @@ class Player:
     def __init__(
         self,
         video_path: str,
-        fps: int = 30,
+        fps: int | None = None,
         volume: int = 100,
         render_style: str = "default",
         skip_threshold: float = 0.012,
@@ -41,7 +42,11 @@ class Player:
             grayscale=grayscale, color_smoothing=color_smoothing
         )
 
-        self.fps = detected_fps or fps
+        if fps or detected_fps is not None:
+            self.fps = fps or detected_fps
+        else:
+            raise VideoProcessingError("Unable to detect FPS in video file.")
+
         self.volume = volume
         self.skip_threshold = skip_threshold
         self.frame_skip = frame_skip

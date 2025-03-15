@@ -87,7 +87,7 @@ def main():
     try:
         player = Player(
             video_path=args.video_path,
-            fps=args.fps or 30,  # Default to 30 if not specified
+            fps=args.fps,
             volume=args.volume,
             render_style=args.render,
             skip_threshold=args.skip_threshold,

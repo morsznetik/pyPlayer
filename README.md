@@ -104,7 +104,7 @@ pyplayer video_path [options]
 
 #### Optional Arguments
 
-- `--fps`, `-f`: Frames per second (default: 30) - will overwrite the video's fps
+- `--fps`, `-f`: Frames per second (default: video's native FPS) - will overwrite the video's fps
 - `--volume`, `-v`: Audio volume from 0-100 (default: 100)
 - `--render`, `-r`: ASCII render style (choices: default, legacy, blockNoColor, block, blockv2, braille)
 - `--skip-threshold`, `-s`: Time threshold to skip frames (default: 0.012)
