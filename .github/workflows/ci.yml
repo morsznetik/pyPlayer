@@ -92,6 +92,7 @@ jobs:
   build-executable:
     runs-on: windows-latest
     needs: lint
+    if: github.event_name == 'workflow_dispatch'
     steps:
       - uses: actions/checkout@v3
 
