@@ -49,6 +49,7 @@ class VideoProcessor:
         self.temp_dir = tempfile.mkdtemp(prefix="pyplayer_")
         self.frames_dir = os.path.join(self.temp_dir, "frames")
         self.audio_path = os.path.join(self.temp_dir, "audio.wav")
+        self._cleanup_done = False
         os.makedirs(self.frames_dir, exist_ok=True)
 
     def process_video(
@@ -146,12 +147,14 @@ class VideoProcessor:
 
     def cleanup(self) -> None:
         """Remove temporary files and directories"""
-        is_cleanup = hasattr(self, "_cleanup_done")
-        if not is_cleanup and os.path.exists(self.temp_dir):
+        if self._cleanup_done:
+            return
+
+        if hasattr(self, "temp_dir") and os.path.exists(
+            self.temp_dir
+        ):  # just in case its in a weird quasi-initialized state
             try:
                 shutil.rmtree(self.temp_dir)
                 self._cleanup_done = True
             except (OSError, IOError) as e:
                 print(f"Warning: Failed to cleanup temporary files: {e}")
-        elif is_cleanup:
-            pass
