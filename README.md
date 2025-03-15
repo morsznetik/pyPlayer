@@ -125,7 +125,7 @@ pyplayer video_path [options]
 
 ### Using as a Package
 
-PyPlayer can be used as a Python package in your own projects. Although created to mainly be used as a CLI, you can still import it into your projects and interact with someone of its various API's. Each part is created as a separate classes that handle different parts, so you can import them individually. Stuff you need is mostly in the base package, but some more internal stuff that still could be useful can be accessed throught importing different modules. You can check the source code for now.
+PyPlayer can be used as a Python package in your own projects. Although created to mainly be used as a CLI, you can still import it into your projects and interact with someone of its various API's. Each part is created as a separate classes that handle different parts, so you can import them individually. Stuff you need is mostly in the base package, but some more internal stuff that still could be useful can be accessed through importing different modules. You can check the source code for now.
 
 ## Development
 
@@ -141,7 +141,7 @@ uv venv
 source venv/bin/activate  # On Windows: venv\Scripts\activate
 
 # Install development dependencies
-uv pip install -e .
+uv pip install -r pyproject.toml --all-extras
 ```
 
 ### Code Style
@@ -153,6 +153,8 @@ This project uses:
 
 - **Ruff** for linting and formatting
 - **Pre-commit hooks** for code quality checks
+- **basedpyright** for type checking, ci-only for now[^1]
+- **Typos** for spelling and grammar checks
 
 Install pre-commit hooks:
 
@@ -160,25 +162,26 @@ Install pre-commit hooks:
 pre-commit install
 ```
 
-That's it! Ruff will automatically run as well, you can also add PyRight, but I didn't feel like enforcing type checking on everything, especially when this is not even fully typed yet. But it does run in the CI to non-restrictively check already typed code
+That's it! Ruff and Typos will automatically run as well.
 
 ## TODO
 
 - in order of personal importance:
 
-- [ ] Fully type define the project[^1]
-- [ ] Custom error handling
+- [x] Fully type define the project
+- [x] Custom error handling
 - [ ] Fix pre-render mode issues when debug is enabled
+- [ ] More extensible text-rendering styles[^2]
 - [ ] Improve color smoothing algorithm
-- [ ] Transparency toggle[^2]
+- [ ] Transparency toggle[^3]
 - [ ] Improve CI/CD pipeline
-- [ ] True[^3] multi-threaded parallelism[^4]
+- [ ] True[^4] multi-threaded parallelism[^5]
 - [ ] Support for playing Youtube videos straight from the URL - potentially something for 1.0, haven't decided yet
 
 ## Known Issues
 
 - [ ] Pre-render mode is bugged with debug's mode on-screen performance statistics
-- [ ] While pre-rendering is running, you cannot exit early via keyboard interrupt[^5]
+- [ ] While pre-rendering is running, you cannot exit early via keyboard interrupt[^6]
 - [ ] Left-side transparency can cause glitchy rendering
 - [x] Some Windows environments using the executable will have issues trying to find the video path
 
@@ -190,12 +193,14 @@ That's it! Ruff will automatically run as well, you can also add PyRight, but I 
 - [ ] Make a character space fill-to-color algorithm to theoretically allow up to 90 times more colors
 - [ ] Add video playback control with on-screen timestamps
 
-[^1]: Coming in 0.2.0-beta*, from that point pyright will be required and set on strict, requiring you to type every function and non-implicit variable.
+[^1]: I've had a lot of trouble between PyRight running locally and in the CI, basedpyright seems to be a little better at it, but it's not perfect hence the a bunch of the reporting rules are turned off. I'm not sure if this is a direct effect of my workflow setup or not.
 
-[^2]: This is in theory possible, but would require a significant re-write of how the text rendering pipeline handles low brightness pixels. Maybe just setting the background to a pure black would work?
+[^2]: Right now, it's limited to predefined styles for TextRenderer - but for the long run, I think it would be a good idea to have a better way of doing them, as well as detecting the user intent of which renderer they would want to use.
 
-[^3]: Possible only due to the fact you can disable the GIL in 3.13.
+[^3]: This is in theory possible, but would require a significant re-write of how the text rendering pipeline handles low brightness pixels. Maybe just setting the background to a pure black would work?
 
-[^4]: Haven't decided if doing it in chunks on singular images or process a couple images ahead of time. Doing it in chunks would be more beneficial as a package, but it would lead to dramatically less friendly DX. Pipelining would have more latency with dynamic settings like the terminal size because they are rendered slightly ahead of time, and use more ram, I guess we could always throw out the rendered frames when the size changes. The buffer size could also be dynamic which would benefit lower-end devices. Batching is obvously the better option in terms of actual performance and latency per frame, but I'm not sure if it would benefit the CLI as a whole. As a comparison - Cinebench R23 uses batching while Cinebench R24 switched to pipelining, which is interesing.
+[^4]: Possible only due to the fact you can disable the GIL in 3.13.
 
-[^5]: It hangs the progress bar, but the calculation are still running in the background then when they complete it will throw KeyboardInterrupt.
+[^5]: Haven't decided if doing it in chunks on singular images or process a couple images ahead of time. Doing it in chunks would be more beneficial as a package, but it would lead to dramatically less friendly DX. Pipelining would have more latency with dynamic settings like the terminal size because they are rendered slightly ahead of time, and use more ram, I guess we could always throw out the rendered frames when the size changes. The buffer size could also be dynamic which would benefit lower-end devices. Batching is obvously the better option in terms of actual performance and latency per frame, but I'm not sure if it would benefit the CLI as a whole. As a comparison - Cinebench R23 uses batching while Cinebench R24 switched to pipelining, which is interesting.
+
+[^6]: It hangs the progress bar, but the calculation are still running in the background then when they complete it will throw KeyboardInterrupt.

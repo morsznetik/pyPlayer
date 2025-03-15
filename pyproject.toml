@@ -8,10 +8,16 @@ dependencies = [
     "pillow",
     "pygame",
     "tqdm",
-    "pre-commit",
-    "ruff",
     "ffmpeg-python",
     "numpy",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pre-commit",
+    "ruff",
+    "basedpyright",
+    "types-tqdm",
 ]
 
 [project.scripts]
@@ -19,3 +25,19 @@ pyplayer = "pyplayer:main"
 
 [tool.setuptools]
 packages = ["pyplayer"]
+
+[tool.pylsp-mypy]
+venv_path = ".venv"
+venv = "."
+
+[tool.basedpyright]
+typeCheckingMode = "recommended"
+reportMissingImports = false
+reportMissingTypeStubs = false
+useLibraryCodeForTypes = true
+reportAny = false
+reportExplicitAny = false
+reportUnannotatedClassAttribute = false
+reportUnusedCallResult = false
+reportUnknownArgumentType = false
+reportUnknownMemberType = false

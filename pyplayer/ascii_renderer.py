@@ -2,7 +2,15 @@ import sys
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from PIL import Image
 from abc import ABC, abstractmethod
+from collections.abc import Sequence
+from typing import override
 from tqdm import tqdm
+from .exceptions import InvalidRenderStyleError, FrameRenderingError
+
+type RGBPixel = tuple[int, int, int]
+type GrayscalePixel = int
+type RGBPixelSequence = Sequence[RGBPixel]
+type GrayscalePixelSequence = Sequence[GrayscalePixel]
 
 
 class ColorManager:
@@ -16,8 +24,8 @@ class ColorManager:
 
     @staticmethod
     def calculate_average_color(
-        colors: list[tuple[int, int, int]],
-    ) -> tuple[int, int, int]:
+        colors: RGBPixelSequence,
+    ) -> RGBPixel:
         if not colors:
             return (0, 0, 0)
         avg_r = sum(c[0] for c in colors) // len(colors)
@@ -27,9 +35,7 @@ class ColorManager:
 
 
 class BaseRenderer(ABC):
-    def __init__(
-        self, color: bool = False, frame_color: tuple[int, int, int] | None = None
-    ):
+    def __init__(self, color: bool = False, frame_color: RGBPixel | None = None):
         self.color = color
         self.frame_color = frame_color
 
@@ -51,13 +57,14 @@ class TextRenderer(BaseRenderer):
         self,
         ascii_chars: str,
         color: bool = False,
-        frame_color: tuple[int, int, int] | None = None,
+        frame_color: RGBPixel | None = None,
     ):
         super().__init__(color, frame_color)
         self.ascii_chars = ascii_chars
 
+    @override
     def render(self, img: Image.Image, width: int, height: int) -> str:
-        img = img.resize((width, height), Image.LANCZOS)  # type: ignore
+        img = img.resize((width, height), Image.Resampling.LANCZOS)
         intensity_range = 255 / (len(self.ascii_chars) - 1)
         return (
             self._render_color(img, intensity_range)
@@ -67,9 +74,10 @@ class TextRenderer(BaseRenderer):
 
     def _render_color(self, img: Image.Image, intensity_range: float) -> str:
         img = img.convert("RGB")
-        ascii_image = []
+        ascii_image: list[str] = []
 
-        for pixel in img.getdata():
+        pixels: RGBPixelSequence = list(img.getdata())
+        for pixel in pixels:
             r, g, b = pixel
             if r == g == b == 0:
                 ascii_image.append(" ")
@@ -83,10 +91,12 @@ class TextRenderer(BaseRenderer):
 
     def _render_grayscale(self, img: Image.Image, intensity_range: float) -> str:
         img = img.convert("L")
+
+        pixel_values: GrayscalePixelSequence = list(img.getdata())
         ascii_image = "".join(
             [
                 self.ascii_chars[int(pixel_value / intensity_range)]
-                for pixel_value in img.getdata()
+                for pixel_value in pixel_values
             ]
         )
         return self.apply_frame_color(ascii_image)
@@ -105,17 +115,19 @@ class BrailleRenderer(BaseRenderer):
         (1, 3): 0x80,  # lower-right 4/2
     }
 
+    @override
     def render(self, img: Image.Image, width: int, height: int) -> str:
         target_width = width * 2
         target_height = height * 4
-        img = img.resize((target_width, target_height), Image.LANCZOS)  # type: ignore
+        img = img.resize((target_width, target_height), Image.Resampling.LANCZOS)
         gray_img = img.convert("L")
         threshold = self._calculate_otsu_threshold(gray_img)
         return self._convert_to_braille(img, gray_img, threshold)
 
     def _calculate_otsu_threshold(self, gray_img: Image.Image) -> int:
         hist = [0] * 256
-        for pixel in gray_img.getdata():
+        pixels: GrayscalePixelSequence = list(gray_img.getdata())
+        for pixel in pixels:
             hist[pixel] += 1
 
         total = sum(hist)
@@ -123,7 +135,8 @@ class BrailleRenderer(BaseRenderer):
         max_variance = 0.0
         threshold = 128
 
-        sum_b = w_b = 0
+        sum_b = 0
+        w_b = 0
         for i in range(256):
             w_b += hist[i]
             if w_b == 0:
@@ -147,21 +160,18 @@ class BrailleRenderer(BaseRenderer):
         self, color_img: Image.Image, gray_img: Image.Image, threshold: int
     ) -> str:
         width, height = gray_img.size
-        gray_pixels = list(gray_img.getdata())
-        color_pixels = list(color_img.convert("RGB").getdata())
-        braille_text = []
+        gray_pixels: GrayscalePixelSequence = list(gray_img.getdata())
+        color_pixels: RGBPixelSequence = list(color_img.convert("RGB").getdata())
+        braille_text: list[str] = []
 
-        cols = width // 2
-        rows = height // 4
-        cols = max(1, cols)
-        rows = max(1, rows)
+        cols = max(1, width // 2)
+        rows = max(1, height // 4)
 
-        # >its 8am give me a break
         for y in range(rows):
-            row = []
+            row: list[str] = []
             for x in range(cols):
                 code = self.BRAILLE_PATTERN_BASE
-                active_dots = []
+                active_dots: RGBPixelSequence = []
 
                 for dy in range(4):
                     for dx in range(2):
@@ -170,8 +180,8 @@ class BrailleRenderer(BaseRenderer):
 
                         if px >= width or py >= height:
                             continue
-                        # TODO: wtf
-                        idx = py * width + px
+
+                        idx: int = py * width + px
                         if (
                             idx < len(gray_pixels)
                             and gray_pixels[idx] > threshold * 0.8
@@ -208,15 +218,17 @@ class AsciiRenderer:
         self,
         style: str = "default",
         color: bool = False,
-        frame_color: tuple[int, int, int] | None = None,
+        frame_color: RGBPixel | None = None,
     ) -> None:
         if style == "braille":
             self.renderer = BrailleRenderer(color=color, frame_color=frame_color)
-        else:
-            ascii_chars = self.ASCII_STYLES.get(style, self.ASCII_STYLES["default"])
+        elif style in self.ASCII_STYLES:
+            ascii_chars = self.ASCII_STYLES[style]
             self.renderer = TextRenderer(
                 ascii_chars, color=color, frame_color=frame_color
             )
+        else:
+            raise InvalidRenderStyleError(style)
 
     def hide_cursor(self) -> None:
         """Hide the terminal cursor"""
@@ -229,8 +241,11 @@ class AsciiRenderer:
         sys.stdout.flush()
 
     def convert_frame(self, image_path: str, width: int, height: int) -> str:
-        with Image.open(image_path) as img:
-            return self.renderer.render(img, width, height)
+        try:
+            with Image.open(image_path) as img:
+                return self.renderer.render(img, width, height)
+        except Exception as e:
+            raise FrameRenderingError(image_path, str(e))
 
     def pre_render_frames(
         self, frame_paths: list[str], width: int, height: int, num_threads: int = 4
@@ -239,15 +254,14 @@ class AsciiRenderer:
             return {}
 
         num_threads = max(1, min(num_threads, len(frame_paths)))
-        pre_rendered_frames = {}
+        pre_rendered_frames: dict[str, str] = {}
 
         def render_frame(frame_path: str) -> tuple[str, str]:
             try:
                 with Image.open(frame_path) as img:
                     return frame_path, self.renderer.render(img, width, height)
             except Exception as e:
-                print(f"Error rendering frame {frame_path}: {str(e)}")
-                return frame_path, ""
+                raise FrameRenderingError(frame_path, str(e))
 
         with ThreadPoolExecutor(max_workers=num_threads) as executor:
             futures = [executor.submit(render_frame, path) for path in frame_paths]

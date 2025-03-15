@@ -8,9 +8,15 @@ import pygame
 import traceback
 import statistics
 import numpy as np
-from typing import Callable, cast
+from typing import Callable
 from .video_processor import VideoProcessor
 from .ascii_renderer import AsciiRenderer
+from .exceptions import (
+    PyPlayerError,
+    FrameNotFoundError,
+    FrameRenderingError,
+    AudioPlaybackError,
+)
 
 
 class Player:
@@ -62,9 +68,12 @@ class Player:
     def play(self) -> None:
         """Play the video with audio synchronization"""
         try:
-            pygame.mixer.init()
-            pygame.mixer.music.load(self.audio_path)
-            pygame.mixer.music.set_volume(self.volume / 100.0)
+            try:
+                pygame.mixer.init()
+                pygame.mixer.music.load(self.audio_path)
+                pygame.mixer.music.set_volume(self.volume / 100.0)
+            except pygame.error as e:
+                raise AudioPlaybackError(str(e))
 
             self.renderer.hide_cursor()
             sys.stdout.write("\033[2J")
@@ -76,8 +85,10 @@ class Player:
             sys.stdout.write("\033[2J")
             pygame.mixer.music.stop()
             print("\nPlayback interrupted by user.")
+        except PyPlayerError as e:
+            print(f"\nError: {e.message}")
         except Exception as e:
-            print(f"\nError: {str(e)}")
+            print(f"\nUnexpected error: {str(e)}")
             traceback.print_exc()
         finally:
             pygame.mixer.quit()
@@ -99,7 +110,7 @@ class Player:
         sync_offsets: list[float] = []
         throughput_rates: list[float] = []
 
-        frame_files: list[str] = sorted(
+        frame_files = sorted(
             os.path.join(self.frames_dir, f)
             for f in os.listdir(self.frames_dir)
             if f.endswith(".png")
@@ -121,9 +132,7 @@ class Player:
 
                 frame_path = frame_files[current_frame]
                 if not os.path.exists(frame_path):
-                    raise FileNotFoundError(
-                        f"Frame {current_frame} missing: {frame_path}"
-                    )
+                    raise FrameNotFoundError(current_frame, frame_path)
 
                 frame_start = time.perf_counter()
                 try:
@@ -136,8 +145,11 @@ class Player:
                             term_size.columns,
                             term_size.lines,
                         )
+                except FrameRenderingError as e:
+                    raise e
                 except Exception as e:
-                    raise RuntimeError(f"Frame conversion failed: {str(e)}")
+                    raise FrameRenderingError(frame_path, str(e))
+
                 frame_process_time = time.perf_counter() - frame_start
 
                 img_size = os.path.getsize(frame_path)
@@ -188,7 +200,7 @@ class Player:
                     max_width = term_size.columns - 4  # margin
 
                     current_line = ""
-                    debug_lines = []
+                    debug_lines = [""]
 
                     for section in debug_sections:
                         if len(current_line) == 0:
@@ -222,7 +234,7 @@ class Player:
 
             # statistics
             frames_played = total_frames - skipped_frames
-            drop_rate: float | None = (
+            drop_rate = (
                 (skipped_frames / total_frames) * 100 if total_frames > 0 else None
             )
 
@@ -260,14 +272,11 @@ class Player:
                 },
             }
 
-            percentiles: dict[int, float | None] = (
+            percentiles = (
                 {
                     p: __calc(
                         frame_times,
-                        cast(
-                            Callable[[list[float]], float],
-                            lambda v: np.percentile(v, p),
-                        ),
+                        lambda v: float(np.percentile(v, p)),
                         1000,
                     )
                     for p in [90, 95, 99]
@@ -323,11 +332,11 @@ class Player:
                 "",
                 f"• Frames: {frames_played}/{total_frames}",
                 f"• Dropped: {skipped_frames} ({drop_rate and f'{drop_rate:.1f}%' or 'N/A'})"
-                f"• Target FPS: {self.fps:.1f}",
+                + f"• Target FPS: {self.fps:.1f}",
                 "",
             ]
 
-            perf_content: list[str] = [""]
+            perf_content = [""]
             for metric, values in stats.items():
                 unit = (
                     "ms"
@@ -352,9 +361,9 @@ class Player:
                 perf_content.append(f"  {' | '.join(vals)}")
                 perf_content.append("")
 
-            latency_content: list[str] = [""]
+            latency_content = [""]
             if percentiles:
-                percentile_vals: list[str] = [
+                percentile_vals = [
                     f"{p}th: {'N/A' if v is None else f'{float(v):.1f}ms'}"
                     for p, v in sorted(percentiles.items())
                 ]
@@ -368,7 +377,7 @@ class Player:
                 draw_box("LATENCY ANALYSIS", latency_content) if percentiles else []
             )
 
-            all_lines: list[str] = []
+            all_lines = [""]
             for line in (
                 summary_box
                 + [""]
