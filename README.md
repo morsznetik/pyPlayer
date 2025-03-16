@@ -170,7 +170,7 @@ That's it! Ruff and Typos will automatically run as well.
 
 - [x] Fully type define the project
 - [x] Custom error handling
-- [ ] Fix pre-render mode issues when debug is enabled
+- [x] Fix pre-render mode issues when debug is enabled
 - [ ] More extensible text-rendering styles[^2]
 - [ ] Compressing color video frames by grouping the same color in the same line
 - [ ] Diff algorithm for printing frames, only updating what is needed
@@ -182,7 +182,7 @@ That's it! Ruff and Typos will automatically run as well.
 
 ## Known Issues
 
-- [ ] Pre-render mode is bugged with debug's mode on-screen performance statistics
+- [x] Pre-render mode is bugged with debug's mode on-screen performance statistics
 - [ ] While pre-rendering is running, you cannot exit early via keyboard interrupt[^6]
 - [ ] Left-side transparency can cause glitchy rendering
 - [x] Some Windows environments using the executable will have issues trying to find the video path
