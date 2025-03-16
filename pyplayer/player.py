@@ -162,6 +162,12 @@ class Player:
                 img_size = os.path.getsize(frame_path)
                 ascii_size = len(ascii_frame.encode("utf-8"))
 
+                # Calculate memory usage of pre-rendered frames
+                pre_rendered_memory = sum(
+                    len(frame.encode("utf-8"))
+                    for frame in self.pre_rendered_frames.values()
+                )
+
                 throughput = (
                     ascii_size / frame_process_time if frame_process_time > 0 else 0
                 )
@@ -193,16 +199,29 @@ class Player:
                     else:
                         real_fps = 0
 
+                    memory_usage = pre_rendered_memory / (1024 * 1024)  # convert to MB
+
                     debug_sections = [
-                        f"Frame: {current_frame + 1}/{total_frames}",
+                        f"Frame: {current_frame + 1}/{total_frames}{' [pre]' if self.pre_render else '[on-the-fly]'}",
                         f"FPS: {self.fps:.1f} (real: {real_fps:.1f})",
-                        f"Proc: {frame_process_time * 1000:.1f}ms",
+                        f"{f'Mem: {memory_usage:.2f}MB' if self.pre_render else f'Proc: {frame_process_time * 1000:.1f}ms'}",
                         f"Size: {img_size / 1024:.1f}KB→{ascii_size / 1024:.1f}KB",
-                        f"Throughput: {throughput / 1024 / 1024:.2f}MB/s",
-                        f"A/V Sync: {time_difference * 1000:+.1f}ms",
-                        f"Skipped: {skipped_frames}",
-                        f"Term: {term_size.columns}x{term_size.lines}",
                     ]
+
+                    # only add throughput for non-pre-rendered frames
+                    if not self.pre_render:
+                        debug_sections.append(
+                            f"Throughput: {throughput / 1024 / 1024:.2f}MB/s"
+                        )
+
+                    # the rest
+                    debug_sections.extend(
+                        [
+                            f"A/V Sync: {time_difference * 1000:+.1f}ms",
+                            f"Skipped: {skipped_frames}",
+                            f"Term: {term_size.columns}x{term_size.lines}",
+                        ]
+                    )
 
                     max_width = term_size.columns - 4  # margin
 
@@ -272,12 +291,14 @@ class Player:
                     "min": __calc(sync_offsets, min, 1000),
                     "max": __calc(sync_offsets, max, 1000),
                 },
-                "Throughput": {
+            }
+
+            if not self.pre_render:
+                stats["Throughput"] = {
                     "avg": __calc(throughput_rates, statistics.mean, 1 / (1024 * 1024)),
                     "min": __calc(throughput_rates, min, 1 / (1024 * 1024)),
                     "max": __calc(throughput_rates, max, 1 / (1024 * 1024)),
-                },
-            }
+                }
 
             percentiles = (
                 {
