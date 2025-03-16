@@ -248,7 +248,7 @@ class AsciiRenderer:
             raise FrameRenderingError(image_path, str(e))
 
     def pre_render_frames(
-        self, frame_paths: list[str], width: int, height: int, num_threads: int = 4
+        self, frame_paths: list[str], width: int, height: int, num_threads: int = 1
     ) -> dict[str, str]:
         if not frame_paths:
             return {}
