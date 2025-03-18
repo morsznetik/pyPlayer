@@ -3,6 +3,7 @@ import argparse
 import multiprocessing
 from pyplayer.player import Player
 from pyplayer.exceptions import PyPlayerError
+from pyplayer.renderer_factory import RendererFactory
 
 
 def main():
@@ -22,7 +23,7 @@ def main():
     parser.add_argument(
         "--render",
         "-r",
-        choices=["default", "legacy", "blockNoColor", "block", "blockv2", "braille"],
+        choices=RendererFactory.get_available_styles(),
         default="default",
         help="ASCII render style",
     )
