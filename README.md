@@ -125,7 +125,7 @@ pyplayer video_path [options]
 
 ### Using as a Package
 
-PyPlayer can be used as a Python package in your own projects. Although created to mainly be used as a CLI, you can still import it into your projects and interact with someone of its various API's. Each part is created as a separate classes that handle different parts, so you can import them individually. You can check the source code for now.
+PyPlayer can be used as a Python package in your own projects. Although created to mainly be used as a CLI, you can still import it into your projects and interact with some of its various API's. Each part is created as a separate classes that handle different parts, so you can import them individually. You can check the source code for now.
 
 Creating a custom renderer is easy, and uses a factory approach, so you can create your own renderer by inheriting from the base Renderer class and implementing the render method. Then you use the provided RendererFactory class to register it via register_renderer using a string key or a tuple of strings that will point to that renderer. Then to use it, you can use the get_renderer method to get an instance of your renderer.
 
