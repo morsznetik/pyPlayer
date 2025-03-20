@@ -249,15 +249,29 @@ class RendererFactory:
     def register_renderer(
         cls, name: str | tuple[str, ...], renderer_class: type[BaseRenderer]
     ) -> None:
-        """Register a custom renderer.
+        """Register a renderer by name. Will override any existing renderer with the same name.
 
         Args:
             name: The name or tuple of names to register the renderer under
             renderer_class: The renderer class to register
         """
+        names = [name] if isinstance(name, str) else name
 
-        for style_name in name if isinstance(name, tuple) else (name,):
-            cls._renderers.setdefault(style_name, renderer_class)
+        for style_name in names:
+            cls._renderers[style_name] = renderer_class
+
+    @classmethod
+    def unregister_renderer(cls, name: str | tuple[str, ...]) -> None:
+        """Unregister a renderer by name.
+
+        Args:
+            name: The name or tuple of names to unregister
+        """
+        names = [name] if isinstance(name, str) else name
+
+        for style_name in names:
+            if style_name in cls._renderers:
+                del cls._renderers[style_name]
 
     @classmethod
     def get_available_styles(cls) -> list[str]:
@@ -267,6 +281,30 @@ class RendererFactory:
             A list of style names that can be used with create_renderer
         """
         return list(cls._renderers.keys())
+
+    @classmethod
+    def has_renderer(cls, style: str) -> bool:
+        """Check if a renderer style is registered.
+
+        Args:
+            style: The style name to check
+
+        Returns:
+            bool: True if the style is registered, False otherwise
+        """
+        return style in cls._renderers
+
+    @classmethod
+    def get_renderer_class(cls, style: str) -> type[BaseRenderer] | None:
+        """Get the renderer class for a given style.
+
+        Args:
+            style: The style name to get the renderer class for
+
+        Returns:
+            The renderer class if found, None otherwise
+        """
+        return cls._renderers.get(style)
 
     @classmethod
     def create_renderer(
@@ -279,18 +317,13 @@ class RendererFactory:
             color: Whether to enable color rendering
             frame_color: Optional frame color as RGB tuple
 
-        Returns:
-            A BaseRenderer instance
-
         Raises:
             InvalidRenderStyleError: If the specified style is not registered
         """
-        if style not in cls._renderers:
+        if not cls.has_renderer(style):
             raise InvalidRenderStyleError(style)
 
-        renderer_class = cls._renderers[style]
-
-        return renderer_class(style=style, color=color, frame_color=frame_color)
+        return cls._renderers[style](style=style, color=color, frame_color=frame_color)
 
 
 # built-in renderers
