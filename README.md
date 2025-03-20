@@ -173,7 +173,7 @@ That's it! Ruff and Typos will automatically run as well.
 - [x] Fully type define the project
 - [x] Custom error handling
 - [x] Fix pre-render mode issues when debug is enabled
-- [ ] More extensible text-rendering styles[^2]
+- [x] More extensible text-rendering styles[^2]
 - [ ] Compressing color video frames by grouping the same color in the same line
 - [ ] Diff algorithm for printing frames, only updating what is needed
 - [ ] Improve color smoothing algorithm
