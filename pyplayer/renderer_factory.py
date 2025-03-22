@@ -246,6 +246,11 @@ class RendererFactory:
     _renderers: dict[str, type[BaseRenderer]] = {}
 
     @classmethod
+    def _normalize_names(cls, name: str | tuple[str, ...]) -> tuple[str, ...]:
+        """Ensure the name is always a tuple for consistent iteration."""
+        return (name,) if isinstance(name, str) else name
+
+    @classmethod
     def register_renderer(
         cls, name: str | tuple[str, ...], renderer_class: type[BaseRenderer]
     ) -> None:
@@ -255,9 +260,8 @@ class RendererFactory:
             name: The name or tuple of names to register the renderer under
             renderer_class: The renderer class to register
         """
-        names = [name] if isinstance(name, str) else name
 
-        for style_name in names:
+        for style_name in cls._normalize_names(name):
             cls._renderers[style_name] = renderer_class
 
     @classmethod
@@ -267,11 +271,9 @@ class RendererFactory:
         Args:
             name: The name or tuple of names to unregister
         """
-        names = [name] if isinstance(name, str) else name
 
-        for style_name in names:
-            if style_name in cls._renderers:
-                del cls._renderers[style_name]
+        for style_name in cls._normalize_names(name):
+            cls._renderers.pop(style_name, None)
 
     @classmethod
     def get_available_styles(cls) -> list[str]:
