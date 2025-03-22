@@ -125,7 +125,9 @@ pyplayer video_path [options]
 
 ### Using as a Package
 
-PyPlayer can be used as a Python package in your own projects. Although created to mainly be used as a CLI, you can still import it into your projects and interact with someone of its various API's. Each part is created as a separate classes that handle different parts, so you can import them individually. Stuff you need is mostly in the base package, but some more internal stuff that still could be useful can be accessed through importing different modules. You can check the source code for now.
+PyPlayer can be used as a Python package in your own projects. Although created to mainly be used as a CLI, you can still import it into your projects and interact with some of its various API's. Each part is created as a separate classes that handle different parts, so you can import them individually. You can check the source code for now.
+
+Creating a custom renderer is easy, and uses a factory approach, so you can create your own renderer by inheriting from the base Renderer class and implementing the render method. Then you use the provided RendererFactory class to register it via register_renderer using a string key or a tuple of strings that will point to that renderer. Then to use it, you can use the get_renderer method to get an instance of your renderer.
 
 ## Development
 
@@ -171,7 +173,7 @@ That's it! Ruff and Typos will automatically run as well.
 - [x] Fully type define the project
 - [x] Custom error handling
 - [x] Fix pre-render mode issues when debug is enabled
-- [ ] More extensible text-rendering styles[^2]
+- [x] More extensible text-rendering styles[^2]
 - [ ] Compressing color video frames by grouping the same color in the same line
 - [ ] Diff algorithm for printing frames, only updating what is needed
 - [ ] Improve color smoothing algorithm

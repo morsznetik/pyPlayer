@@ -1,10 +1,10 @@
 import sys
-from concurrent.futures import ThreadPoolExecutor, as_completed
-from PIL import Image
 from abc import ABC, abstractmethod
 from collections.abc import Sequence
-from typing import override
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from PIL import Image
 from tqdm import tqdm
+from typing import override
 from .exceptions import InvalidRenderStyleError, FrameRenderingError
 
 type RGBPixel = tuple[int, int, int]
@@ -35,15 +35,36 @@ class ColorManager:
 
 
 class BaseRenderer(ABC):
-    def __init__(self, color: bool = False, frame_color: RGBPixel | None = None):
+    """Base class for all renderers.
+
+    All custom renderers should inherit from this class and implement the render method.
+    """
+
+    def __init__(
+        self, style: str, color: bool = False, frame_color: RGBPixel | None = None
+    ):
+        self.style = style
         self.color = color
         self.frame_color = frame_color
 
     @abstractmethod
     def render(self, img: Image.Image, width: int, height: int) -> str:
+        """Render an image as string.
+
+        Args:
+            img: The PIL Image to render
+            width: The target width in characters
+            height: The target height in characters
+
+        Returns:
+            A string containing the string representation of the image
+        """
         pass
 
-    def apply_frame_color(self, text: str) -> str:
+    def apply_frame_color(
+        self, text: str
+    ) -> str:  # might find a better way to do this, idk yet
+        """Apply frame color to the rendered text if specified."""
         if self.frame_color:
             r, g, b = self.frame_color
             return (
@@ -53,14 +74,21 @@ class BaseRenderer(ABC):
 
 
 class TextRenderer(BaseRenderer):
+    """Renderer that converts images to ASCII text characters."""
+
+    styles = {
+        "default": "      .-':_,^=;><+!rc*/z?sLTv)J7(|Fi{C}fI31tlu[neoZ5Yxjya]2ESwqkP6h9d4VpOGbUAKXHm8RD#$Bg0MNWQ%&@",
+        "legacy": "     .:-=+*#%@",
+        "blockNoColor": " ▒▓█",
+        "block": "▒▓█",
+        "blockv2": "█████████",
+    }
+
     def __init__(
-        self,
-        ascii_chars: str,
-        color: bool = False,
-        frame_color: RGBPixel | None = None,
+        self, style: str, color: bool = False, frame_color: RGBPixel | None = None
     ):
-        super().__init__(color, frame_color)
-        self.ascii_chars = ascii_chars
+        super().__init__(style, color, frame_color)
+        self.ascii_chars = self.styles[style]
 
     @override
     def render(self, img: Image.Image, width: int, height: int) -> str:
@@ -103,6 +131,8 @@ class TextRenderer(BaseRenderer):
 
 
 class BrailleRenderer(BaseRenderer):
+    """Renderer that converts images to braille patterns."""
+
     BRAILLE_PATTERN_BASE = 0x2800
     DOT_MAPPING = {
         (0, 0): 0x01,  # top-left 1/1
@@ -205,14 +235,110 @@ class BrailleRenderer(BaseRenderer):
         return self.apply_frame_color("\n".join(braille_text))
 
 
-class AsciiRenderer:
-    ASCII_STYLES = {
-        "default": "      .-':_,^=;><+!rc*/z?sLTv)J7(|Fi{C}fI31tlu[neoZ5Yxjya]2ESwqkP6h9d4VpOGbUAKXHm8RD#$Bg0MNWQ%&@",
-        "legacy": "     .:-=+*#%@",
-        "blockNoColor": " ▒▓█",
-        "block": "▒▓█",
-        "blockv2": "█████████",
-    }
+class RendererFactory:
+    """Factory class for creating renderers.
+
+    This class manages the creation of renderers and allows for registration of custom renderers.
+    Each renderer is responsible for handling its own styles internally.
+    """
+
+    # registry for all renderers
+    _renderers: dict[str, type[BaseRenderer]] = {}
+
+    @classmethod
+    def _normalize_names(cls, name: str | tuple[str, ...]) -> tuple[str, ...]:
+        """Ensure the name is always a tuple for consistent iteration."""
+        return (name,) if isinstance(name, str) else name
+
+    @classmethod
+    def register_renderer(
+        cls, name: str | tuple[str, ...], renderer_class: type[BaseRenderer]
+    ) -> None:
+        """Register a renderer by name. Will override any existing renderer with the same name.
+
+        Args:
+            name: The name or tuple of names to register the renderer under
+            renderer_class: The renderer class to register
+        """
+
+        for style_name in cls._normalize_names(name):
+            cls._renderers[style_name] = renderer_class
+
+    @classmethod
+    def unregister_renderer(cls, name: str | tuple[str, ...]) -> None:
+        """Unregister a renderer by name.
+
+        Args:
+            name: The name or tuple of names to unregister
+        """
+
+        for style_name in cls._normalize_names(name):
+            cls._renderers.pop(style_name, None)
+
+    @classmethod
+    def get_available_styles(cls) -> list[str]:
+        """Get a list of all available rendering styles.
+
+        Returns:
+            A list of style names that can be used with create_renderer
+        """
+        return list(cls._renderers.keys())
+
+    @classmethod
+    def has_renderer(cls, style: str) -> bool:
+        """Check if a renderer style is registered.
+
+        Args:
+            style: The style name to check
+
+        Returns:
+            bool: True if the style is registered, False otherwise
+        """
+        return style in cls._renderers
+
+    @classmethod
+    def get_renderer_class(cls, style: str) -> type[BaseRenderer] | None:
+        """Get the renderer class for a given style.
+
+        Args:
+            style: The style name to get the renderer class for
+
+        Returns:
+            The renderer class if found, None otherwise
+        """
+        return cls._renderers.get(style)
+
+    @classmethod
+    def create_renderer(
+        cls, style: str, color: bool = False, frame_color: RGBPixel | None = None
+    ) -> BaseRenderer:
+        """Create a renderer instance based on the specified style.
+
+        Args:
+            style: The rendering style to use
+            color: Whether to enable color rendering
+            frame_color: Optional frame color as RGB tuple
+
+        Raises:
+            InvalidRenderStyleError: If the specified style is not registered
+        """
+        if not cls.has_renderer(style):
+            raise InvalidRenderStyleError(style)
+
+        return cls._renderers[style](style=style, color=color, frame_color=frame_color)
+
+
+# built-in renderers
+RendererFactory.register_renderer(tuple(TextRenderer.styles.keys()), TextRenderer)
+RendererFactory.register_renderer("braille", BrailleRenderer)
+
+
+class RendererManager:
+    """Manager class for handling rendering operations.
+
+    This class provides a high-level interface for rendering operations and handles
+    common functionality like cursor management and frame pre-rendering.
+    """
 
     def __init__(
         self,
@@ -220,15 +346,9 @@ class AsciiRenderer:
         color: bool = False,
         frame_color: RGBPixel | None = None,
     ) -> None:
-        if style == "braille":
-            self.renderer = BrailleRenderer(color=color, frame_color=frame_color)
-        elif style in self.ASCII_STYLES:
-            ascii_chars = self.ASCII_STYLES[style]
-            self.renderer = TextRenderer(
-                ascii_chars, color=color, frame_color=frame_color
-            )
-        else:
-            raise InvalidRenderStyleError(style)
+        self.renderer = RendererFactory.create_renderer(
+            style=style, color=color, frame_color=frame_color
+        )
 
     def hide_cursor(self) -> None:
         """Hide the terminal cursor"""

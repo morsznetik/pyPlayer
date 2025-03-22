@@ -10,7 +10,7 @@ import statistics
 import numpy as np
 from typing import Callable
 from .video_processor import VideoProcessor
-from .ascii_renderer import AsciiRenderer
+from .renderer_factory import RendererManager
 from .exceptions import (
     PyPlayerError,
     FrameNotFoundError,
@@ -56,7 +56,7 @@ class Player:
         self.pre_render = pre_render
         self.num_threads = num_threads
 
-        self.renderer = AsciiRenderer(
+        self.renderer = RendererManager(
             style=render_style, color=color, frame_color=frame_color
         )
 
