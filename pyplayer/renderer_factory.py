@@ -1,5 +1,4 @@
 import sys
-import re
 from abc import ABC, abstractmethod
 from collections.abc import Sequence
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -39,35 +38,71 @@ class ColorManager:
         if not text:
             return text
 
-        ansi_pattern = re.compile(r"\033\[38;2;\d+;\d+;\d+m")
         lines = text.split("\n")
         out = []
 
         for ln in lines:
-            if not ln:
+            if not ln or "\033[" not in ln:
                 out.append(ln)
                 continue
 
-            matches = list(re.finditer(ansi_pattern, ln))
-            if not matches:
+            segments = []
+            i = 0
+            current_color = None
+
+            while i < len(ln):
+                if ln.startswith("\033[38;2;", i):
+                    end = ln.find("m", i)
+                    if end != -1:
+                        if (
+                            current_color is not None
+                            and segments
+                            and segments[-1][0] == current_color
+                        ):
+                            segments[-1] = (
+                                current_color,
+                                segments[-1][1] + ln[i : end + 1],
+                            )
+                        else:
+                            segments.append((ln[i : end + 1], ""))
+                        current_color = ln[i : end + 1]
+                        i = end + 1
+                        continue
+                elif ln.startswith("\033[0m", i):
+                    if (
+                        current_color is not None
+                        and segments
+                        and segments[-1][0] == current_color
+                    ):
+                        segments[-1] = (current_color, segments[-1][1] + ln[i : i + 4])
+                    current_color = None
+                    i += 4
+                    continue
+
+                if current_color is not None:
+                    if segments and segments[-1][0] == current_color:
+                        segments[-1] = (current_color, segments[-1][1] + ln[i])
+                    else:
+                        segments.append((current_color, ln[i]))
+                else:
+                    segments.append((None, ln[i]))
+                i += 1
+
+            if not segments:
                 out.append(ln)
                 continue
 
-            res, last_code, last_pos = [], None, 0
+            result = []
+            for color, text in segments:
+                if color:
+                    result.append(color + text)
+                else:
+                    result.append(text)
 
-            for match in matches:
-                pos, code = match.start(), match.group()
+            if any(color for color, _ in segments):
+                result.append(ColorManager.reset_color())
 
-                res.append(ln[last_pos:pos])  # preserve text between codes
-
-                if code != last_code:  # avoid redundant color codes
-                    res.append(code)
-                    last_code = code
-
-                last_pos = pos + len(code)
-
-            res.append(ln[last_pos:])  # append remaining text
-            out.append("".join(res))
+            out.append("".join(result))
 
         return "\n".join(out)
 
