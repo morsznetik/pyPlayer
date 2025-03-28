@@ -129,6 +129,8 @@ PyPlayer can be used as a Python package in your own projects. Although created 
 
 Creating a custom renderer is easy, and uses a factory approach, so you can create your own renderer by inheriting from the base Renderer class and implementing the render method. Then you use the provided RendererFactory class to register it via register_renderer using a string key or a tuple of strings that will point to that renderer. Then to use it, you can use the get_renderer method to get an instance of your renderer.
 
+For optimal performance, it's strongly recommended to pass the output of render through ColorManager.compress_frame to reduce the amount of data being passed through to the terminal. This compression helps maintain smooth playback by minimizing terminal I/O overhead.
+
 ## Development
 
 ### Setup Development Environment
@@ -174,7 +176,7 @@ That's it! Ruff and Typos will automatically run as well.
 - [x] Custom error handling
 - [x] Fix pre-render mode issues when debug is enabled
 - [x] More extensible text-rendering styles[^2]
-- [ ] Compressing color video frames by grouping the same color in the same line
+- [x] Compressing color video frames by grouping the same color in the same line
 - [ ] Diff algorithm for printing frames, only updating what is needed
 - [ ] Improve color smoothing algorithm
 - [ ] Transparency toggle[^3]
