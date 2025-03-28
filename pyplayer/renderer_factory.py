@@ -1,4 +1,5 @@
 import sys
+import re
 from abc import ABC, abstractmethod
 from collections.abc import Sequence
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -32,6 +33,43 @@ class ColorManager:
         avg_g = sum(c[1] for c in colors) // len(colors)
         avg_b = sum(c[2] for c in colors) // len(colors)
         return (avg_r, avg_g, avg_b)
+
+    @staticmethod
+    def compress_frame(text: str) -> str:
+        if not text:
+            return text
+
+        ansi_pattern = re.compile(r"\033\[38;2;\d+;\d+;\d+m")
+        lines = text.split("\n")
+        out = []
+
+        for ln in lines:
+            if not ln:
+                out.append(ln)
+                continue
+
+            matches = list(re.finditer(ansi_pattern, ln))
+            if not matches:
+                out.append(ln)
+                continue
+
+            res, last_code, last_pos = [], None, 0
+
+            for match in matches:
+                pos, code = match.start(), match.group()
+
+                res.append(ln[last_pos:pos])  # preserve text between codes
+
+                if code != last_code:  # avoid redundant color codes
+                    res.append(code)
+                    last_code = code
+
+                last_pos = pos + len(code)
+
+            res.append(ln[last_pos:])  # append remaining text
+            out.append("".join(res))
+
+        return "\n".join(out)
 
 
 class BaseRenderer(ABC):
@@ -94,11 +132,12 @@ class TextRenderer(BaseRenderer):
     def render(self, img: Image.Image, width: int, height: int) -> str:
         img = img.resize((width, height), Image.Resampling.LANCZOS)
         intensity_range = 255 / (len(self.ascii_chars) - 1)
-        return (
+        result = (
             self._render_color(img, intensity_range)
             if self.color
             else self._render_grayscale(img, intensity_range)
         )
+        return ColorManager.compress_frame(result)
 
     def _render_color(self, img: Image.Image, intensity_range: float) -> str:
         img = img.convert("RGB")
@@ -152,7 +191,8 @@ class BrailleRenderer(BaseRenderer):
         img = img.resize((target_width, target_height), Image.Resampling.LANCZOS)
         gray_img = img.convert("L")
         threshold = self._calculate_otsu_threshold(gray_img)
-        return self._convert_to_braille(img, gray_img, threshold)
+        result = self._convert_to_braille(img, gray_img, threshold)
+        return ColorManager.compress_frame(result)
 
     def _calculate_otsu_threshold(self, gray_img: Image.Image) -> int:
         hist = [0] * 256
