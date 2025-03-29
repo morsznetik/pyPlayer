@@ -122,6 +122,8 @@ pyplayer video_path [options]
 - `--pre-render`, `-pr`: Pre-render video frames (uses more RAM)
   *Not recommended, it will use a lot of RAM, but useful if you want to play a video at a large resolution or make the video play smoother if you do not have a powerful enough CPU. For a 3 minute long 853x226, colored, braille-rendered video I found it to use around 9GB of RAM, but it's still not a bad option if you want to play a video at a large resolution. (Currently bugged with debug's mode on-screen performance statistics.)*
 - `--threads`, `-t`: Number of threads for frame rendering (default: number of CPU cores)
+- `--diff-mode`, `-dm`: Frame difference rendering mode (choices: line, char, none, default: none)
+  *The current implementations may not improve performance and could potentially reduce it. Try it, depends on your hardware*
 
 ### Using as a Package
 
@@ -177,7 +179,7 @@ That's it! Ruff and Typos will automatically run as well.
 - [x] Fix pre-render mode issues when debug is enabled
 - [x] More extensible text-rendering styles[^2]
 - [x] Compressing color video frames by grouping the same color in the same line
-- [ ] Diff algorithm for printing frames, only updating what is needed
+- [x] Diff algorithm for printing frames, only updating what is needed
 - [ ] Improve color smoothing algorithm
 - [ ] Transparency toggle[^3]
 - [ ] Improve CI/CD pipeline
