@@ -68,6 +68,13 @@ def main():
         default=multiprocessing.cpu_count(),
         help="Number of threads for frame rendering",
     )
+    parser.add_argument(
+        "--diff-mode",
+        "-dm",
+        choices=["line", "char", "none"],
+        default="none",
+        help="Frame difference rendering mode (line-by-line, character-by-character, or none)",
+    )
 
     args = parser.parse_args()
 
@@ -100,6 +107,7 @@ def main():
             color_smoothing=args.color_smoothing,
             pre_render=args.pre_render,
             num_threads=args.threads,
+            diff_mode=args.diff_mode,
         )
         player.play()
     except PyPlayerError as e:

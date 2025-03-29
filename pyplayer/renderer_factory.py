@@ -11,6 +11,7 @@ type RGBPixel = tuple[int, int, int]
 type GrayscalePixel = int
 type RGBPixelSequence = Sequence[RGBPixel]
 type GrayscalePixelSequence = Sequence[GrayscalePixel]
+type ColorTextSegment = tuple[str | None, str]
 
 
 class ColorManager:
@@ -46,7 +47,7 @@ class ColorManager:
                 out.append(ln)
                 continue
 
-            segments = []
+            segments: list[ColorTextSegment] = []
             i = 0
             current_color = None
 
