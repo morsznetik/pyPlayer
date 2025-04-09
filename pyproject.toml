@@ -41,6 +41,3 @@ reportUnannotatedClassAttribute = false
 reportUnusedCallResult = false
 reportUnknownArgumentType = false
 reportUnknownMemberType = false
-
-[tool.uv.workspace]
-members = ["typed-ffmpeg-testing"]
