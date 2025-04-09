@@ -135,18 +135,29 @@ class Player:
                     sys.stdout.write(curr_lines[i])
 
         elif self.diff_mode == "char":
-            for i, (prev_line, curr_line) in enumerate(zip(prev_lines, curr_lines)):
+            for row_idx, (prev_line, curr_line) in enumerate(
+                zip(prev_lines, curr_lines)
+            ):
                 stripped_prev = strip_ansi(prev_line)
                 stripped_curr = strip_ansi(curr_line)
 
-                if stripped_prev != stripped_curr:
-                    sys.stdout.write(f"\033[{i + 1};0H")
-                    sys.stdout.write(curr_line)
+                max_len = min(len(stripped_prev), len(stripped_curr))
+                for col_idx in range(max_len):
+                    if stripped_prev[col_idx] != stripped_curr[col_idx]:
+                        sys.stdout.write(f"\033[{row_idx + 1};{col_idx + 1}H")
+                        sys.stdout.write(curr_line[col_idx])
 
+                # Handle any extra characters in the current line
+                if len(stripped_curr) > len(stripped_prev):
+                    for col_idx in range(len(stripped_prev), len(stripped_curr)):
+                        sys.stdout.write(f"\033[{row_idx + 1};{col_idx + 1}H")
+                        sys.stdout.write(curr_line[col_idx])
+
+            # Handle extra lines if current frame is longer
             if len(curr_lines) > len(prev_lines):
-                for i in range(len(prev_lines), len(curr_lines)):
-                    sys.stdout.write(f"\033[{i + 1};0H")
-                    sys.stdout.write(curr_lines[i])
+                for row_idx in range(len(prev_lines), len(curr_lines)):
+                    sys.stdout.write(f"\033[{row_idx + 1};1H")
+                    sys.stdout.write(curr_lines[row_idx])
 
         self.diff_render_time = time.perf_counter() - diff_start_time
 
