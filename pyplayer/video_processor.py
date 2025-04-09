@@ -1,4 +1,4 @@
-# pyright: reportUnknownVariableType=false
+# pyright: reportUnknownVariableType=false,reportAttributeAccessIssue=false
 import os
 import tempfile
 import shutil
@@ -48,7 +48,10 @@ class VideoProcessor:
         os.makedirs(self.frames_dir, exist_ok=True)
 
     def process_video(
-        self, grayscale: bool = False, color_smoothing: bool = False
+        self,
+        grayscale: bool = False,
+        color_smoothing: bool = False,
+        output_resolution: tuple[int, int] = (640, 480),
     ) -> tuple[str, str, float | None]:
         """Process video file by extracting frames and audio"""
         if not check_ffmpeg_available():
@@ -58,7 +61,7 @@ class VideoProcessor:
             print(f"Processing video: {self.video_path} (This might take a bit...)")
             fps = self._get_video_fps()
             self._extract_audio()
-            self._extract_frames(grayscale, color_smoothing)
+            self._extract_frames(grayscale, color_smoothing, output_resolution)
             return self.frames_dir, self.audio_path, fps
         except ffmpeg_e.FFMpegError as e:
             stderr = getattr(e, "stderr", None)
@@ -81,7 +84,10 @@ class VideoProcessor:
             raise AudioExtractionError(error_msg)
 
     def _extract_frames(
-        self, grayscale: bool = False, color_smoothing: bool = False
+        self,
+        grayscale: bool = False,
+        color_smoothing: bool = False,
+        output_resolution: tuple[int, int] = (640, 480),
     ) -> None:
         """Extract and process frames from video file"""
         stream = ffmpeg.input(filename=self.video_path)
@@ -90,12 +96,15 @@ class VideoProcessor:
         if grayscale:
             # Apply the complex lutrgb filter
             lut_expr = "if(gte(val,0), if(gte(val,224), 255, if(gte(val,128), 192, if(gte(val,64), 128, 0))))"
-            stream = stream.filter("lutrgb", r=lut_expr, g=lut_expr, b=lut_expr)  # pyright: ignore[reportAttributeAccessIssue]
+            stream = stream.filter("lutrgb", r=lut_expr, g=lut_expr, b=lut_expr)
             # Apply hue filter to remove saturation
             stream = stream.filter("hue", s=0)
 
         if color_smoothing:
-            stream = stream.filter("hqdn3d")  # pyright: ignore[reportAttributeAccessIssue]
+            stream = stream.filter("hqdn3d")
+
+        # Apply resolution change
+        stream = stream.filter("scale", output_resolution[0], output_resolution[1])
 
         output_path = os.path.join(self.frames_dir, "frame_%05d.png")
         try:
