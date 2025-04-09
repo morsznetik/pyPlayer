@@ -8,8 +8,8 @@ dependencies = [
     "pillow",
     "pygame",
     "tqdm",
-    "ffmpeg-python",
     "numpy",
+    "typed-ffmpeg",
 ]
 
 [project.optional-dependencies]
