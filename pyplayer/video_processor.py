@@ -50,7 +50,7 @@ class VideoProcessor:
         self,
         grayscale: bool = False,
         color_smoothing: bool = False,
-        output_resolution: tuple[int, int] = (640, 480),
+        output_resolution: tuple[int, int] | None = (640, 480),
     ) -> tuple[str, str, float | None]:
         """Process video file by extracting frames and audio"""
         if not check_ffmpeg_available():
@@ -86,7 +86,7 @@ class VideoProcessor:
         self,
         grayscale: bool = False,
         color_smoothing: bool = False,
-        output_resolution: tuple[int, int] = (640, 480),
+        output_resolution: tuple[int, int] | None = (640, 480),
     ) -> None:
         """Extract and process frames from video file"""
         stream = ffmpeg.input(filename=self.video_path)
@@ -102,8 +102,8 @@ class VideoProcessor:
         if color_smoothing:
             stream = stream.hqdn3d()
 
-        # Apply resolution change
-        stream = stream.scale(w=output_resolution[0], h=output_resolution[1])
+        if output_resolution is not None:
+            stream = stream.scale(w=output_resolution[0], h=output_resolution[1])
 
         output_path = os.path.join(self.frames_dir, "frame_%05d.png")
         try:

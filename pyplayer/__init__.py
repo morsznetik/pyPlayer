@@ -80,7 +80,7 @@ def main():
         "-or",
         type=str,
         default="640,480",
-        help="Resolution for cutting the video into frames. Format: width,height, default is 640,480",
+        help="Resolution for video-frame processing. This does not change the terminal's rendering resolution but may reduce quality if the terminal's resolution is higher. Format: width,height (e.g., 640,480) or 'native' for the video's original resolution.",
     )
 
     args = parser.parse_args()
@@ -97,27 +97,34 @@ def main():
             print("Expected format: R,G,B (e.g., 255,0,0)")
             sys.exit(1)
 
-    output_resolution_val: tuple[int, int]
-    try:
-        parts = args.output_resolution.split(",")
-        if len(parts) != 2:
-            raise ValueError("Resolution must contain exactly one comma.")
+    output_resolution_val: tuple[int, int] | None
+    if args.output_resolution.lower() == "native":
+        output_resolution_val = None
+    else:
+        try:
+            parts = args.output_resolution.split(",")
+            if len(parts) != 2:
+                raise ValueError("Resolution must contain exactly one comma.")
 
-        width_str, height_str = parts
-        # handle potential whitespace like "640, 480"
-        width = int(width_str.strip())
-        height = int(height_str.strip())
+            width_str, height_str = parts
+            # handle potential whitespace like "640, 480"
+            width = int(width_str.strip())
+            height = int(height_str.strip())
 
-        if width <= 0 or height <= 0:
-            raise ValueError("Resolution width and height must be positive integers.")
+            if width <= 0 or height <= 0:
+                raise ValueError(
+                    "Resolution width and height must be positive integers."
+                )
 
-        output_resolution_val = (width, height)  # assignment happens here
-    except ValueError as e:
-        print(
-            f"Error: Invalid output resolution format '{args.output_resolution}'. {e}"
-        )
-        print("Expected format: width,height (e.g., 640,480)")
-        sys.exit(1)
+            output_resolution_val = (width, height)
+        except ValueError as e:
+            print(
+                f"Error: Invalid output resolution format '{args.output_resolution}'. {e}"
+            )
+            print(
+                "Expected format: width,height (e.g., 640,480) or literal 'native' for original resolution"
+            )
+            sys.exit(1)
 
     player = None
     try:
