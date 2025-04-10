@@ -12,6 +12,7 @@ import numpy as np
 from typing import Callable
 from .video_processor import VideoProcessor
 from .renderer_factory import RendererManager
+from .renderer_factory import RGBPixel
 from .exceptions import (
     PyPlayerError,
     FrameNotFoundError,
@@ -32,7 +33,7 @@ class Player:
         frame_skip: bool = True,
         color: bool = False,
         debug: bool = False,
-        frame_color: tuple[int, int, int] | None = None,
+        frame_color: RGBPixel | None = None,
         grayscale: bool = False,
         color_smoothing: bool = False,
         pre_render: bool = False,

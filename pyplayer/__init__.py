@@ -3,7 +3,7 @@ import argparse
 import multiprocessing
 from pyplayer.player import Player
 from pyplayer.exceptions import PyPlayerError
-from pyplayer.renderer_factory import RendererFactory
+from pyplayer.renderer_factory import RendererFactory, RGBPixel
 
 
 def main():
@@ -85,7 +85,7 @@ def main():
 
     args = parser.parse_args()
 
-    frame_color: tuple[int, int, int] | None = None
+    frame_color: RGBPixel | None = None
     if args.frame_color:
         try:
             r, g, b = map(int, args.frame_color.split(","))
