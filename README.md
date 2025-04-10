@@ -120,10 +120,12 @@ pyplayer video_path [options]
 - `--color-smoothing`, `-cs`: Apply color smoothing to video
   *Generally not recommended, can cause some blockiness and ghosting, but feel free to play around with it*
 - `--pre-render`, `-pr`: Pre-render video frames (uses more RAM)
-  *Not recommended, it will use a lot of RAM, but useful if you want to play a video at a large resolution or make the video play smoother if you do not have a powerful enough CPU. For a 3 minute long 853x226, colored, braille-rendered video I found it to use around 9GB of RAM, but it's still not a bad option if you want to play a video at a large resolution. (Currently bugged with debug's mode on-screen performance statistics.)*
+  *Not recommended, it will use a lot of RAM, but useful if you want to play a video at a large resolution or make the video play smoother if you do not have a powerful enough CPU. For a 3 minute long 853x226, colored, braille-rendered video I found it to use around 9GB of RAM, but it's still not a bad option if you want to play a video at a large resolution.*
 - `--threads`, `-t`: Number of threads for frame rendering (default: number of CPU cores)
 - `--diff-mode`, `-dm`: Frame difference rendering mode (choices: line, char, none, default: none)
   *The current implementations may not improve performance and could potentially reduce it. Try it, depends on your hardware*
+- `--output-resolution`, `-or`: Custom resolution for video processing (default: native)
+  *Format: width,height (e.g., 640,480). Use a lower resolution if video processing is slow. This affects video-frame processing, not terminal rendering.*
 
 ### Using as a Package
 
@@ -189,7 +191,7 @@ That's it! Ruff and Typos will automatically run as well.
 ## Known Issues
 
 - [x] Pre-render mode is bugged with debug's mode on-screen performance statistics
-- [ ] While pre-rendering is running, you cannot exit early via keyboard interrupt[^6]
+- [x] While pre-rendering is running, you cannot exit early via keyboard interrupt[^6]
 - [ ] Left-side transparency can cause glitchy rendering
 - [x] Some Windows environments using the executable will have issues trying to find the video path
 
