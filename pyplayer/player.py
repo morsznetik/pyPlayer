@@ -38,7 +38,7 @@ class Player:
         pre_render: bool = False,
         num_threads: int = 0,
         diff_mode: str = "none",
-        output_resolution: tuple[int, int] = (640, 480),
+        output_resolution: tuple[int, int] | None = (640, 480),
     ) -> None:
         self.processor = VideoProcessor(video_path)
         self.frames_dir, self.audio_path, detected_fps = self.processor.process_video(
