@@ -79,8 +79,8 @@ def main():
         "--output-resolution",
         "-or",
         type=str,
-        default="640,480",
-        help="Resolution for video-frame processing. This does not change the terminal's rendering resolution but may reduce quality if the terminal's resolution is higher. Format: width,height (e.g., 640,480) or 'native' for the video's original resolution.",
+        default="native",
+        help="Default is 'native'. Use a lower resolution if video processing is slow. This setting affects video-frame processing, not terminal rendering. Format: width,height (e.g., 640,480) or 'native' for original resolution.",
     )
 
     args = parser.parse_args()
