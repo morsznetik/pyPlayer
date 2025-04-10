@@ -1,4 +1,3 @@
-# pyright: reportUnknownVariableType=false,reportAttributeAccessIssue=false
 import os
 import tempfile
 import shutil
@@ -96,19 +95,19 @@ class VideoProcessor:
         if grayscale:
             # Apply the complex lutrgb filter
             lut_expr = "if(gte(val,0), if(gte(val,224), 255, if(gte(val,128), 192, if(gte(val,64), 128, 0))))"
-            stream = stream.filter("lutrgb", r=lut_expr, g=lut_expr, b=lut_expr)
+            stream = stream.lutrgb(r=lut_expr, g=lut_expr, b=lut_expr)
             # Apply hue filter to remove saturation
-            stream = stream.filter("hue", s=0)
+            stream = stream.hue(s=0)
 
         if color_smoothing:
-            stream = stream.filter("hqdn3d")
+            stream = stream.hqdn3d()
 
         # Apply resolution change
-        stream = stream.filter("scale", output_resolution[0], output_resolution[1])
+        stream = stream.scale(w=output_resolution[0], h=output_resolution[1])
 
         output_path = os.path.join(self.frames_dir, "frame_%05d.png")
         try:
-            output_stream = stream.output(filename=output_path)
+            output_stream = ffmpeg.output(stream, filename=output_path)
             output_stream.run(
                 capture_stdout=True, capture_stderr=True, overwrite_output=True
             )
@@ -120,7 +119,9 @@ class VideoProcessor:
     def _get_video_fps(self) -> float | None:
         """Get video frame rate using FFprobe"""
         try:
-            probe = ffmpeg.probe(filename=self.video_path)
+            probe = ffmpeg.probe(
+                filename=self.video_path, cmd="ffprobe", timeout=5, loglevel="quiet"
+            )
             video_stream = next(
                 (
                     stream
