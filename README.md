@@ -190,7 +190,7 @@ That's it! Ruff and Typos will automatically run as well.
 - [x] Compressing color video frames by grouping the same color in the same line
 - [x] Diff algorithm for printing frames, only updating what is needed
 - [x] Improve color smoothing algorithm
-- [ ] Create a custom parser and validator for CLI args
+- [x] Create a custom parser and validator for CLI args
 - [ ] Transparency toggle[^3]
 - [ ] Improve CI/CD pipeline
 - [ ] True[^4] multi-threaded parallelism[^5]
