@@ -50,7 +50,7 @@ class VideoProcessor:
         self,
         grayscale: bool = False,
         color_smoothing: bool = False,
-        color_smoothing_params: dict | None = None,
+        color_smoothing_params: dict[str, float] | None = None,
         output_resolution: tuple[int, int] | None = (640, 480),
     ) -> tuple[str, str, float | None]:
         """Process video file by extracting frames and audio"""
@@ -89,7 +89,7 @@ class VideoProcessor:
         self,
         grayscale: bool = False,
         color_smoothing: bool = False,
-        color_smoothing_params: dict | None = None,
+        color_smoothing_params: dict[str, float] | None = None,
         output_resolution: tuple[int, int] | None = (640, 480),
     ) -> None:
         """Extract and process frames from video file
@@ -126,7 +126,13 @@ class VideoProcessor:
             # merge user parameters with defaults
             params = {**defaults, **(color_smoothing_params or {})}
 
-            stream = stream.hqdn3d(**{k: str(v) for k, v in params.items()})
+            # Extract individual parameters to pass to hqdn3d
+            stream = stream.hqdn3d(
+                luma_spatial=params.get("luma_spatial", 4.0),
+                chroma_spatial=params.get("chroma_spatial", 3.0),
+                luma_tmp=params.get("luma_tmp", 6.0),
+                chroma_tmp=params.get("chroma_tmp", 4.5),
+            )
 
         if output_resolution is not None:
             stream = stream.scale(w=output_resolution[0], h=output_resolution[1])

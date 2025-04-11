@@ -36,7 +36,7 @@ class Player:
         frame_color: RGBPixel | None = None,
         grayscale: bool = False,
         color_smoothing: bool = False,
-        color_smoothing_params: dict | None = None,
+        color_smoothing_params: dict[str, float] | None = None,
         pre_render: bool = False,
         num_threads: int = 0,
         diff_mode: str = "none",

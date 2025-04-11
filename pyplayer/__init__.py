@@ -59,12 +59,12 @@ def main():
         "--color-smoothing-params",
         "-csp",
         type=str,
-        help="Parameters for color smoothing in format 'param1=value1,param2=value2'. \n"
-        "Supported parameters: \n"
-        "- luma_spatial: Spatial luma strength (default: 4.0) - controls smoothing intensity for brightness\n"
-        "- chroma_spatial: Spatial chroma strength (default: 3.0) - controls smoothing intensity for colors\n"
-        "- luma_tmp: Temporal luma strength (default: 6.0) - controls smoothing between frames for brightness\n"
-        "- chroma_tmp: Temporal chroma strength (default: 4.5) - controls smoothing between frames for colors",
+        help="Parameters for color smoothing in format 'param1=value1,param2=value2'. "
+        + "Supported parameters: "
+        + "- luma_spatial: Spatial luma strength (default: 4.0) - controls smoothing intensity for brightness\n"
+        + "- chroma_spatial: Spatial chroma strength (default: 3.0) - controls smoothing intensity for colors\n"
+        + "- luma_tmp: Temporal luma strength (default: 6.0) - controls smoothing between frames for brightness\n"
+        + "- chroma_tmp: Temporal chroma strength (default: 4.5) - controls smoothing between frames for colors",
     )
     parser.add_argument(
         "--pre-render",
@@ -146,13 +146,12 @@ def main():
                 color_smoothing_params[key.strip()] = float(value.strip())
 
             valid_params = ["luma_spatial", "chroma_spatial", "luma_tmp", "chroma_tmp"]
-            invalid_params = [
-                p for p in color_smoothing_params if p not in valid_params
-            ]
+            param_keys: list[str] = list((color_smoothing_params or {}).keys())
+            invalid_params: list[str] = [p for p in param_keys if p not in valid_params]
             if invalid_params:
                 raise ValueError(
                     f"Invalid parameters: {', '.join(invalid_params)}. "
-                    f"Valid parameters are: {', '.join(valid_params)}"
+                    + f"Valid parameters are: {', '.join(valid_params)}"
                 )
         except ValueError as e:
             print(f"Error parsing color smoothing parameters: {e}")
