@@ -3,7 +3,7 @@ import argparse
 import multiprocessing
 from pyplayer.player import Player
 from pyplayer.exceptions import PyPlayerError
-from pyplayer.renderer_factory import RendererFactory
+from pyplayer.renderer_factory import RendererFactory, RGBPixel
 
 
 def main():
@@ -68,20 +68,62 @@ def main():
         default=multiprocessing.cpu_count(),
         help="Number of threads for frame rendering",
     )
+    parser.add_argument(
+        "--diff-mode",
+        "-dm",
+        choices=["line", "char", "none"],
+        default="none",
+        help="Frame difference rendering mode (line-by-line, character-by-character, or none)",
+    )
+    parser.add_argument(
+        "--output-resolution",
+        "-or",
+        type=str,
+        default="native",
+        help="Default is 'native'. Use a lower resolution if video processing is slow. This setting affects video-frame processing, not terminal rendering. Format: width,height (e.g., 640,480) or 'native' for original resolution.",
+    )
 
     args = parser.parse_args()
 
-    # Parse frame color if provided
-    frame_color = None
+    frame_color: RGBPixel | None = None
     if args.frame_color:
         try:
             r, g, b = map(int, args.frame_color.split(","))
             if not all(0 <= c <= 255 for c in (r, g, b)):
-                print("Error: RGB values must be between 0 and 255")
-                sys.exit(1)
+                raise ValueError("RGB values must be between 0 and 255")
             frame_color = (r, g, b)
-        except ValueError:
-            print("Error: Frame color must be in the format R,G,B (e.g., 255,0,0)")
+        except ValueError as e:
+            print(f"Error: Invalid frame color format '{args.frame_color}'. {e}")
+            print("Expected format: R,G,B (e.g., 255,0,0)")
+            sys.exit(1)
+
+    output_resolution_val: tuple[int, int] | None
+    if args.output_resolution.lower() == "native":
+        output_resolution_val = None
+    else:
+        try:
+            parts = args.output_resolution.split(",")
+            if len(parts) != 2:
+                raise ValueError("Resolution must contain exactly one comma.")
+
+            width_str, height_str = parts
+            # handle potential whitespace like "640, 480"
+            width = int(width_str.strip())
+            height = int(height_str.strip())
+
+            if width <= 0 or height <= 0:
+                raise ValueError(
+                    "Resolution width and height must be positive integers."
+                )
+
+            output_resolution_val = (width, height)
+        except ValueError as e:
+            print(
+                f"Error: Invalid output resolution format '{args.output_resolution}'. {e}"
+            )
+            print(
+                "Expected format: width,height (e.g., 640,480) or literal 'native' for original resolution"
+            )
             sys.exit(1)
 
     player = None
@@ -100,6 +142,8 @@ def main():
             color_smoothing=args.color_smoothing,
             pre_render=args.pre_render,
             num_threads=args.threads,
+            diff_mode=args.diff_mode,
+            output_resolution=output_resolution_val,
         )
         player.play()
     except PyPlayerError as e:
@@ -107,13 +151,16 @@ def main():
         sys.exit(1)
     except KeyboardInterrupt:
         print("\nPlayback interrupted by user.")
-        sys.exit(0)
     except Exception as e:
         print(f"Unexpected error: {str(e)}")
         sys.exit(1)
     finally:
         if player:
             player.processor.cleanup()
+        # make sure exit(0) happens after cleanup if interrupted
+        exc_type, _, _ = sys.exc_info()
+        if exc_type is KeyboardInterrupt:
+            sys.exit(0)
 
 
 if __name__ == "__main__":

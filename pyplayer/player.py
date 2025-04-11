@@ -7,10 +7,12 @@ import time
 import pygame
 import traceback
 import statistics
+import re
 import numpy as np
 from typing import Callable
 from .video_processor import VideoProcessor
 from .renderer_factory import RendererManager
+from .renderer_factory import RGBPixel
 from .exceptions import (
     PyPlayerError,
     FrameNotFoundError,
@@ -31,15 +33,19 @@ class Player:
         frame_skip: bool = True,
         color: bool = False,
         debug: bool = False,
-        frame_color: tuple[int, int, int] | None = None,
+        frame_color: RGBPixel | None = None,
         grayscale: bool = False,
         color_smoothing: bool = False,
         pre_render: bool = False,
         num_threads: int = 0,
+        diff_mode: str = "none",
+        output_resolution: tuple[int, int] | None = (640, 480),
     ) -> None:
         self.processor = VideoProcessor(video_path)
         self.frames_dir, self.audio_path, detected_fps = self.processor.process_video(
-            grayscale=grayscale, color_smoothing=color_smoothing
+            grayscale=grayscale,
+            color_smoothing=color_smoothing,
+            output_resolution=output_resolution,
         )
 
         if fps is not None:
@@ -55,6 +61,9 @@ class Player:
         self.debug = debug
         self.pre_render = pre_render
         self.num_threads = num_threads
+        self.diff_mode = diff_mode
+        self.previous_frame = None
+        self.diff_render_time = 0.0
 
         self.renderer = RendererManager(
             style=render_style, color=color, frame_color=frame_color
@@ -102,6 +111,60 @@ class Player:
             self.renderer.show_cursor()
             self.processor.cleanup()
 
+    def _render_frame_diff(self, current_frame: str) -> None:
+        diff_start_time = time.perf_counter()
+
+        if self.previous_frame is None:
+            sys.stdout.write("\033[H")
+            sys.stdout.write(current_frame)
+            self.diff_render_time = time.perf_counter() - diff_start_time
+            return
+
+        prev_lines = self.previous_frame.split("\n")
+        curr_lines = current_frame.split("\n")
+
+        def strip_ansi(text: str) -> str:
+            ansi_escape = re.compile(r"\033(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])")
+            return ansi_escape.sub("", text)
+
+        if self.diff_mode == "line":
+            for i, (prev_line, curr_line) in enumerate(zip(prev_lines, curr_lines)):
+                if strip_ansi(prev_line) != strip_ansi(curr_line):
+                    sys.stdout.write(f"\033[{i + 1};0H")
+                    sys.stdout.write(curr_line)
+
+            if len(curr_lines) > len(prev_lines):
+                for i in range(len(prev_lines), len(curr_lines)):
+                    sys.stdout.write(f"\033[{i + 1};0H")
+                    sys.stdout.write(curr_lines[i])
+
+        elif self.diff_mode == "char":
+            for row_idx, (prev_line, curr_line) in enumerate(
+                zip(prev_lines, curr_lines)
+            ):
+                stripped_prev = strip_ansi(prev_line)
+                stripped_curr = strip_ansi(curr_line)
+
+                max_len = min(len(stripped_prev), len(stripped_curr))
+                for col_idx in range(max_len):
+                    if stripped_prev[col_idx] != stripped_curr[col_idx]:
+                        sys.stdout.write(f"\033[{row_idx + 1};{col_idx + 1}H")
+                        sys.stdout.write(curr_line[col_idx])
+
+                # Handle any extra characters in the current line
+                if len(stripped_curr) > len(stripped_prev):
+                    for col_idx in range(len(stripped_prev), len(stripped_curr)):
+                        sys.stdout.write(f"\033[{row_idx + 1};{col_idx + 1}H")
+                        sys.stdout.write(curr_line[col_idx])
+
+            # Handle extra lines if current frame is longer
+            if len(curr_lines) > len(prev_lines):
+                for row_idx in range(len(prev_lines), len(curr_lines)):
+                    sys.stdout.write(f"\033[{row_idx + 1};1H")
+                    sys.stdout.write(curr_lines[row_idx])
+
+        self.diff_render_time = time.perf_counter() - diff_start_time
+
     def _play_frames(self) -> None:
         """Handle frame playback and timing"""
         term_size = os.get_terminal_size()
@@ -116,6 +179,7 @@ class Player:
         processing_times: list[float] = []
         sync_offsets: list[float] = []
         throughput_rates: list[float] = []
+        diff_render_times: list[float] = []  # Track diff render times
 
         frame_files = sorted(
             os.path.join(self.frames_dir, f)
@@ -180,9 +244,21 @@ class Player:
                     processing_times.append(frame_process_time)
                     sync_offsets.append(time_difference)
                     throughput_rates.append(throughput)
+                    diff_render_times.append(
+                        self.diff_render_time
+                    )  # Add diff render time to the list
 
-                sys.stdout.write("\033[H")
-                sys.stdout.write(ascii_frame)
+                # Apply diff rendering based on the selected mode
+                if self.diff_mode == "none" or self.previous_frame is None:
+                    # Full frame rendering (no diff)
+                    sys.stdout.write("\033[H")
+                    sys.stdout.write(ascii_frame)
+                else:
+                    # Diff-based rendering
+                    self._render_frame_diff(ascii_frame)
+
+                # Store current frame for next comparison
+                self.previous_frame = ascii_frame
 
                 if self.pre_render and frame_path in self.pre_rendered_frames:
                     del self.pre_rendered_frames[frame_path]
@@ -212,6 +288,10 @@ class Player:
                     if not self.pre_render:
                         debug_sections.append(
                             f"Throughput: {throughput / 1024 / 1024:.2f}MB/s"
+                        )
+                        # Add diff render timing information
+                        debug_sections.append(
+                            f"Diff Render: {self.diff_render_time * 1000:.1f}ms"
                         )
 
                     # the rest
@@ -290,6 +370,11 @@ class Player:
                     "avg": __calc(sync_offsets, statistics.mean, 1000),
                     "min": __calc(sync_offsets, min, 1000),
                     "max": __calc(sync_offsets, max, 1000),
+                },
+                "Diff Rendering": {
+                    "avg": __calc(diff_render_times, statistics.mean, 1000),
+                    "min": __calc(diff_render_times, min, 1000),
+                    "max": __calc(diff_render_times, max, 1000),
                 },
             }
 

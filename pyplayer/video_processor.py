@@ -1,23 +1,17 @@
 import os
-import multiprocessing
 import tempfile
 import shutil
 import ffmpeg
 import re
 import subprocess
 from shutil import which
-from typing import Any
+from ffmpeg import exceptions as ffmpeg_e
 from .exceptions import (
     VideoNotFoundError,
     FFmpegNotFoundError,
     AudioExtractionError,
     FrameExtractionError,
 )
-
-type FFmpegInput = Any  # ffmpeg.input return type
-type FFmpegOutput = Any  # output stream type
-type FFmpegStream = Any  # stream type
-type FFmpegProbeResult = dict[str, Any]  # ffmpeg.probe return type
 
 
 def check_ffmpeg_available() -> bool:  # TODO: make this return the version as well
@@ -53,7 +47,10 @@ class VideoProcessor:
         os.makedirs(self.frames_dir, exist_ok=True)
 
     def process_video(
-        self, grayscale: bool = False, color_smoothing: bool = False
+        self,
+        grayscale: bool = False,
+        color_smoothing: bool = False,
+        output_resolution: tuple[int, int] | None = (640, 480),
     ) -> tuple[str, str, float | None]:
         """Process video file by extracting frames and audio"""
         if not check_ffmpeg_available():
@@ -63,58 +60,58 @@ class VideoProcessor:
             print(f"Processing video: {self.video_path} (This might take a bit...)")
             fps = self._get_video_fps()
             self._extract_audio()
-            self._extract_frames(grayscale, color_smoothing)
+            self._extract_frames(grayscale, color_smoothing, output_resolution)
             return self.frames_dir, self.audio_path, fps
-        except ffmpeg.Error as e:
+        except ffmpeg_e.FFMpegError as e:
             stderr = getattr(e, "stderr", None)
             error_msg = stderr.decode() if stderr else str(e)
             raise FrameExtractionError(error_msg)
 
     def _extract_audio(self) -> None:
         """Extract audio from video file"""
-        num_threads = multiprocessing.cpu_count()
         try:
-            input_stream: FFmpegInput = ffmpeg.input(self.video_path)
-            output_stream: FFmpegOutput = input_stream.output(
-                self.audio_path, q="0", map="a", threads=num_threads
+            input_stream = ffmpeg.input(filename=self.video_path)
+            output_stream = input_stream.output(
+                filename=self.audio_path, q="0", map="a"
             )
             output_stream.run(
                 capture_stdout=True, capture_stderr=True, overwrite_output=True
             )
-        except ffmpeg.Error as e:
+        except ffmpeg_e.FFMpegError as e:
             stderr = getattr(e, "stderr", None)
             error_msg = stderr.decode() if stderr else str(e)
             raise AudioExtractionError(error_msg)
 
     def _extract_frames(
-        self, grayscale: bool = False, color_smoothing: bool = False
+        self,
+        grayscale: bool = False,
+        color_smoothing: bool = False,
+        output_resolution: tuple[int, int] | None = (640, 480),
     ) -> None:
         """Extract and process frames from video file"""
-        num_threads = multiprocessing.cpu_count()
-
-        # Start with the base video input
-        stream: FFmpegStream = ffmpeg.input(self.video_path)
+        stream = ffmpeg.input(filename=self.video_path)
 
         # Apply grayscale filter if requested
         if grayscale:
             # Apply the complex lutrgb filter
             lut_expr = "if(gte(val,0), if(gte(val,224), 255, if(gte(val,128), 192, if(gte(val,64), 128, 0))))"
-            stream = stream.filter("lutrgb", r=lut_expr, g=lut_expr, b=lut_expr)
+            stream = stream.lutrgb(r=lut_expr, g=lut_expr, b=lut_expr)
             # Apply hue filter to remove saturation
-            stream = stream.filter("hue", s=0)
+            stream = stream.hue(s=0)
 
         if color_smoothing:
-            stream = stream.filter("hqdn3d")
+            stream = stream.hqdn3d()
+
+        if output_resolution is not None:
+            stream = stream.scale(w=output_resolution[0], h=output_resolution[1])
 
         output_path = os.path.join(self.frames_dir, "frame_%05d.png")
         try:
-            output_stream: FFmpegOutput = stream.output(
-                output_path, threads=num_threads
-            )
+            output_stream = ffmpeg.output(stream, filename=output_path)
             output_stream.run(
                 capture_stdout=True, capture_stderr=True, overwrite_output=True
             )
-        except ffmpeg.Error as e:
+        except ffmpeg_e.FFMpegError as e:
             stderr = getattr(e, "stderr", None)
             error_msg = stderr.decode() if stderr else str(e)
             raise FrameExtractionError(error_msg)
@@ -122,7 +119,9 @@ class VideoProcessor:
     def _get_video_fps(self) -> float | None:
         """Get video frame rate using FFprobe"""
         try:
-            probe: FFmpegProbeResult = ffmpeg.probe(self.video_path)
+            probe = ffmpeg.probe(
+                filename=self.video_path, cmd="ffprobe", timeout=5, loglevel="quiet"
+            )
             video_stream = next(
                 (
                     stream
@@ -142,7 +141,7 @@ class VideoProcessor:
                     num, den = map(int, match.groups())
                     return num / den
             return None
-        except (ffmpeg.Error, KeyError, StopIteration, ValueError):
+        except (ffmpeg_e.FFMpegError, KeyError, StopIteration, ValueError):
             return None
 
     def cleanup(self) -> None:

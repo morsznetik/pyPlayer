@@ -120,14 +120,20 @@ pyplayer video_path [options]
 - `--color-smoothing`, `-cs`: Apply color smoothing to video
   *Generally not recommended, can cause some blockiness and ghosting, but feel free to play around with it*
 - `--pre-render`, `-pr`: Pre-render video frames (uses more RAM)
-  *Not recommended, it will use a lot of RAM, but useful if you want to play a video at a large resolution or make the video play smoother if you do not have a powerful enough CPU. For a 3 minute long 853x226, colored, braille-rendered video I found it to use around 9GB of RAM, but it's still not a bad option if you want to play a video at a large resolution. (Currently bugged with debug's mode on-screen performance statistics.)*
+  *Not recommended, it will use a lot of RAM, but useful if you want to play a video at a large resolution or make the video play smoother if you do not have a powerful enough CPU. For a 3 minute long 853x226, colored, braille-rendered video I found it to use around 9GB of RAM, but it's still not a bad option if you want to play a video at a large resolution.*
 - `--threads`, `-t`: Number of threads for frame rendering (default: number of CPU cores)
+- `--diff-mode`, `-dm`: Frame difference rendering mode (choices: line, char, none, default: none)
+  *The current implementations may not improve performance and could potentially reduce it. Try it, depends on your hardware*
+- `--output-resolution`, `-or`: Custom resolution for video processing (default: native)
+  *Format: width,height (e.g., 640,480). Use a lower resolution if video processing is slow. This affects video-frame processing, not terminal rendering.*
 
 ### Using as a Package
 
 PyPlayer can be used as a Python package in your own projects. Although created to mainly be used as a CLI, you can still import it into your projects and interact with some of its various API's. Each part is created as a separate classes that handle different parts, so you can import them individually. You can check the source code for now.
 
 Creating a custom renderer is easy, and uses a factory approach, so you can create your own renderer by inheriting from the base Renderer class and implementing the render method. Then you use the provided RendererFactory class to register it via register_renderer using a string key or a tuple of strings that will point to that renderer. Then to use it, you can use the get_renderer method to get an instance of your renderer.
+
+For optimal performance, it's strongly recommended to pass the output of render through ColorManager.compress_frame to reduce the amount of data being passed through to the terminal. This compression helps maintain smooth playback by minimizing terminal I/O overhead.
 
 ## Development
 
@@ -174,8 +180,8 @@ That's it! Ruff and Typos will automatically run as well.
 - [x] Custom error handling
 - [x] Fix pre-render mode issues when debug is enabled
 - [x] More extensible text-rendering styles[^2]
-- [ ] Compressing color video frames by grouping the same color in the same line
-- [ ] Diff algorithm for printing frames, only updating what is needed
+- [x] Compressing color video frames by grouping the same color in the same line
+- [x] Diff algorithm for printing frames, only updating what is needed
 - [ ] Improve color smoothing algorithm
 - [ ] Transparency toggle[^3]
 - [ ] Improve CI/CD pipeline

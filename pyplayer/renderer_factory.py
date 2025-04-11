@@ -11,6 +11,7 @@ type RGBPixel = tuple[int, int, int]
 type GrayscalePixel = int
 type RGBPixelSequence = Sequence[RGBPixel]
 type GrayscalePixelSequence = Sequence[GrayscalePixel]
+type ColorTextSegment = tuple[str | None, str]
 
 
 class ColorManager:
@@ -32,6 +33,79 @@ class ColorManager:
         avg_g = sum(c[1] for c in colors) // len(colors)
         avg_b = sum(c[2] for c in colors) // len(colors)
         return (avg_r, avg_g, avg_b)
+
+    @staticmethod
+    def compress_frame(text: str) -> str:
+        if not text:
+            return text
+
+        lines = text.split("\n")
+        out = []
+
+        for ln in lines:
+            if not ln or "\033[" not in ln:
+                out.append(ln)
+                continue
+
+            segments: list[ColorTextSegment] = []
+            i = 0
+            current_color = None
+
+            while i < len(ln):
+                if ln.startswith("\033[38;2;", i):
+                    end = ln.find("m", i)
+                    if end != -1:
+                        if (
+                            current_color is not None
+                            and segments
+                            and segments[-1][0] == current_color
+                        ):
+                            segments[-1] = (
+                                current_color,
+                                segments[-1][1] + ln[i : end + 1],
+                            )
+                        else:
+                            segments.append((ln[i : end + 1], ""))
+                        current_color = ln[i : end + 1]
+                        i = end + 1
+                        continue
+                elif ln.startswith("\033[0m", i):
+                    if (
+                        current_color is not None
+                        and segments
+                        and segments[-1][0] == current_color
+                    ):
+                        segments[-1] = (current_color, segments[-1][1] + ln[i : i + 4])
+                    current_color = None
+                    i += 4
+                    continue
+
+                if current_color is not None:
+                    if segments and segments[-1][0] == current_color:
+                        segments[-1] = (current_color, segments[-1][1] + ln[i])
+                    else:
+                        segments.append((current_color, ln[i]))
+                else:
+                    segments.append((None, ln[i]))
+                i += 1
+
+            if not segments:
+                out.append(ln)
+                continue
+
+            result = []
+            for color, text in segments:
+                if color:
+                    result.append(color + text)
+                else:
+                    result.append(text)
+
+            if any(color for color, _ in segments):
+                result.append(ColorManager.reset_color())
+
+            out.append("".join(result))
+
+        return "\n".join(out)
 
 
 class BaseRenderer(ABC):
@@ -94,11 +168,12 @@ class TextRenderer(BaseRenderer):
     def render(self, img: Image.Image, width: int, height: int) -> str:
         img = img.resize((width, height), Image.Resampling.LANCZOS)
         intensity_range = 255 / (len(self.ascii_chars) - 1)
-        return (
+        result = (
             self._render_color(img, intensity_range)
             if self.color
             else self._render_grayscale(img, intensity_range)
         )
+        return ColorManager.compress_frame(result)
 
     def _render_color(self, img: Image.Image, intensity_range: float) -> str:
         img = img.convert("RGB")
@@ -152,7 +227,8 @@ class BrailleRenderer(BaseRenderer):
         img = img.resize((target_width, target_height), Image.Resampling.LANCZOS)
         gray_img = img.convert("L")
         threshold = self._calculate_otsu_threshold(gray_img)
-        return self._convert_to_braille(img, gray_img, threshold)
+        result = self._convert_to_braille(img, gray_img, threshold)
+        return ColorManager.compress_frame(result)
 
     def _calculate_otsu_threshold(self, gray_img: Image.Image) -> int:
         hist = [0] * 256
