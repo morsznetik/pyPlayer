@@ -50,6 +50,7 @@ class VideoProcessor:
         self,
         grayscale: bool = False,
         color_smoothing: bool = False,
+        color_smoothing_params: dict | None = None,
         output_resolution: tuple[int, int] | None = (640, 480),
     ) -> tuple[str, str, float | None]:
         """Process video file by extracting frames and audio"""
@@ -60,7 +61,9 @@ class VideoProcessor:
             print(f"Processing video: {self.video_path} (This might take a bit...)")
             fps = self._get_video_fps()
             self._extract_audio()
-            self._extract_frames(grayscale, color_smoothing, output_resolution)
+            self._extract_frames(
+                grayscale, color_smoothing, color_smoothing_params, output_resolution
+            )
             return self.frames_dir, self.audio_path, fps
         except ffmpeg_e.FFMpegError as e:
             stderr = getattr(e, "stderr", None)
@@ -86,9 +89,22 @@ class VideoProcessor:
         self,
         grayscale: bool = False,
         color_smoothing: bool = False,
+        color_smoothing_params: dict | None = None,
         output_resolution: tuple[int, int] | None = (640, 480),
     ) -> None:
-        """Extract and process frames from video file"""
+        """Extract and process frames from video file
+
+        Args:
+            grayscale: Apply grayscale filter if True
+            color_smoothing: Apply denoise filter if True
+            color_smoothing_params: Parameters for the hqdn3d denoising filter
+                Supported parameters:
+                - luma_spatial: Spatial luma strength (default: 4.0)
+                - chroma_spatial: Spatial chroma strength (default: 3.0)
+                - luma_tmp: Temporal luma strength (default: 6.0)
+                - chroma_tmp: Temporal chroma strength (default: 4.5)
+            output_resolution: Target resolution as (width, height) tuple
+        """
         stream = ffmpeg.input(filename=self.video_path)
 
         # Apply grayscale filter if requested
@@ -100,7 +116,17 @@ class VideoProcessor:
             stream = stream.hue(s=0)
 
         if color_smoothing:
-            stream = stream.hqdn3d()
+            defaults = {
+                "luma_spatial": 4.0,
+                "chroma_spatial": 3.0,
+                "luma_tmp": 6.0,
+                "chroma_tmp": 4.5,
+            }
+
+            # merge user parameters with defaults
+            params = {**defaults, **(color_smoothing_params or {})}
+
+            stream = stream.hqdn3d(**{k: str(v) for k, v in params.items()})
 
         if output_resolution is not None:
             stream = stream.scale(w=output_resolution[0], h=output_resolution[1])

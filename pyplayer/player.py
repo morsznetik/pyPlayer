@@ -36,6 +36,7 @@ class Player:
         frame_color: RGBPixel | None = None,
         grayscale: bool = False,
         color_smoothing: bool = False,
+        color_smoothing_params: dict | None = None,
         pre_render: bool = False,
         num_threads: int = 0,
         diff_mode: str = "none",
@@ -45,6 +46,7 @@ class Player:
         self.frames_dir, self.audio_path, detected_fps = self.processor.process_video(
             grayscale=grayscale,
             color_smoothing=color_smoothing,
+            color_smoothing_params=color_smoothing_params,
             output_resolution=output_resolution,
         )
 

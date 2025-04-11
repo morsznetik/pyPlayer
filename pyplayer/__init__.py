@@ -56,6 +56,17 @@ def main():
         help="Apply color smoothing to video",
     )
     parser.add_argument(
+        "--color-smoothing-params",
+        "-csp",
+        type=str,
+        help="Parameters for color smoothing in format 'param1=value1,param2=value2'. \n"
+        "Supported parameters: \n"
+        "- luma_spatial: Spatial luma strength (default: 4.0) - controls smoothing intensity for brightness\n"
+        "- chroma_spatial: Spatial chroma strength (default: 3.0) - controls smoothing intensity for colors\n"
+        "- luma_tmp: Temporal luma strength (default: 6.0) - controls smoothing between frames for brightness\n"
+        "- chroma_tmp: Temporal chroma strength (default: 4.5) - controls smoothing between frames for colors",
+    )
+    parser.add_argument(
         "--pre-render",
         "-pr",
         action="store_true",
@@ -126,6 +137,30 @@ def main():
             )
             sys.exit(1)
 
+    color_smoothing_params = None
+    if args.color_smoothing_params:
+        try:
+            color_smoothing_params = {}
+            for param in args.color_smoothing_params.split(","):
+                key, value = param.strip().split("=")
+                color_smoothing_params[key.strip()] = float(value.strip())
+
+            valid_params = ["luma_spatial", "chroma_spatial", "luma_tmp", "chroma_tmp"]
+            invalid_params = [
+                p for p in color_smoothing_params if p not in valid_params
+            ]
+            if invalid_params:
+                raise ValueError(
+                    f"Invalid parameters: {', '.join(invalid_params)}. "
+                    f"Valid parameters are: {', '.join(valid_params)}"
+                )
+        except ValueError as e:
+            print(f"Error parsing color smoothing parameters: {e}")
+            print(
+                "Expected format: param1=value1,param2=value2 (e.g., luma_spatial=4.0,chroma_spatial=3.0)"
+            )
+            sys.exit(1)
+
     player = None
     try:
         player = Player(
@@ -140,6 +175,7 @@ def main():
             frame_color=frame_color,
             grayscale=args.grayscale,
             color_smoothing=args.color_smoothing,
+            color_smoothing_params=color_smoothing_params,
             pre_render=args.pre_render,
             num_threads=args.threads,
             diff_mode=args.diff_mode,
