@@ -119,6 +119,13 @@ pyplayer video_path [options]
   *This will force the conversion of a video to grayscale, can eliminate some brightness issues when rendering without color.*
 - `--color-smoothing`, `-cs`: Apply color smoothing to video
   *Generally not recommended, can cause some blockiness and ghosting, but feel free to play around with it*
+- `--color-smoothing-params`, `-csp`: Parameters for color smoothing in format 'param1=value1,param2=value2'
+  *Customize the color smoothing algorithm with the following parameters:*
+  - *luma_spatial: Spatial luma strength (default: 4.0) - controls smoothing intensity for brightness*
+  - *chroma_spatial: Spatial chroma strength (default: 3.0) - controls smoothing intensity for colors*
+  - *luma_tmp: Temporal luma strength (default: 6.0) - controls smoothing between frames for brightness*
+  - *chroma_tmp: Temporal chroma strength (default: 4.5) - controls smoothing between frames for colors*
+  *Higher values result in more aggressive smoothing. Lower values preserve more detail.*
 - `--pre-render`, `-pr`: Pre-render video frames (uses more RAM)
   *Not recommended, it will use a lot of RAM, but useful if you want to play a video at a large resolution or make the video play smoother if you do not have a powerful enough CPU. For a 3 minute long 853x226, colored, braille-rendered video I found it to use around 9GB of RAM, but it's still not a bad option if you want to play a video at a large resolution.*
 - `--threads`, `-t`: Number of threads for frame rendering (default: number of CPU cores)
@@ -182,7 +189,8 @@ That's it! Ruff and Typos will automatically run as well.
 - [x] More extensible text-rendering styles[^2]
 - [x] Compressing color video frames by grouping the same color in the same line
 - [x] Diff algorithm for printing frames, only updating what is needed
-- [ ] Improve color smoothing algorithm
+- [x] Improve color smoothing algorithm
+- [ ] Create a custom parser and validator for CLI args
 - [ ] Transparency toggle[^3]
 - [ ] Improve CI/CD pipeline
 - [ ] True[^4] multi-threaded parallelism[^5]
