@@ -46,43 +46,11 @@ jobs:
         run: uv pip compile pyproject.toml -o uv.lock
 
       - name: Install dependencies
-        run: uv pip install --uvlock uv.lock
+        run: uv pip install -r pyproject.toml -e .
 
       - name: Run Basedpyright
         run: |
           .venv/bin/python -m basedpyright
-
-  build:
-    runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.13'
-
-      - name: Install uv
-        uses: astral-sh/setup-uv@v5
-        with:
-          cache-dependency-path: 'uv.lock'
-
-      - name: Create virtual environment
-        run: uv venv
-
-      - name: Install dependencies
-        run: |
-          uv pip install build wheel
-
-      - name: Build package
-        run: python -m build
-
-      - name: Upload build artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: dist
-          path: dist/
 
   build-executable:
     runs-on: windows-latest
@@ -106,12 +74,12 @@ jobs:
 
       - name: Install dependencies
         run: |
-          uv pip install -e .
+          uv pip install -r pyproject.toml -e .
           uv pip install pyinstaller
 
-      - name: Build executable
+      - name: Build executable using spec file
         run: |
-          .venv\Scripts\python.exe -m PyInstaller --onefile --name pyplayer --add-data "pyplayer;pyplayer" pyplayer\__init__.py
+          .venv\Scripts\python.exe -m PyInstaller pyplayer.spec --distpath dist
         shell: cmd
 
       - name: Zip executable
