@@ -115,11 +115,16 @@ class BaseRenderer(ABC):
     """
 
     def __init__(
-        self, style: str, color: bool = False, frame_color: RGBPixel | None = None
+        self,
+        style: str,
+        color: bool = False,
+        frame_color: RGBPixel | None = None,
+        transparent: bool = True,
     ):
         self.style = style
         self.color = color
         self.frame_color = frame_color
+        self.transparent = transparent
 
     @abstractmethod
     def render(self, img: Image.Image, width: int, height: int) -> str:
@@ -146,91 +151,19 @@ class BaseRenderer(ABC):
             )
         return text
 
+    def calculate_otsu_threshold(self, gray_img: Image.Image) -> int:
+        """Calculate optimal threshold using Otsu's method.
 
-class TextRenderer(BaseRenderer):
-    """Renderer that converts images to ASCII text characters."""
+        This method finds the optimal brightness threshold that maximizes
+        the between-class variance (or minimizes within-class variance)
+        between foreground and background pixels.
 
-    styles = {
-        "default": "      .-':_,^=;><+!rc*/z?sLTv)J7(|Fi{C}fI31tlu[neoZ5Yxjya]2ESwqkP6h9d4VpOGbUAKXHm8RD#$Bg0MNWQ%&@",
-        "legacy": "     .:-=+*#%@",
-        "blockNoColor": " ▒▓█",
-        "block": "▒▓█",
-        "blockv2": "█████████",
-    }
+        Args:
+            gray_img: A grayscale PIL Image
 
-    def __init__(
-        self, style: str, color: bool = False, frame_color: RGBPixel | None = None
-    ):
-        super().__init__(style, color, frame_color)
-        self.ascii_chars = self.styles[style]
-
-    @override
-    def render(self, img: Image.Image, width: int, height: int) -> str:
-        img = img.resize((width, height), Image.Resampling.LANCZOS)
-        intensity_range = 255 / (len(self.ascii_chars) - 1)
-        result = (
-            self._render_color(img, intensity_range)
-            if self.color
-            else self._render_grayscale(img, intensity_range)
-        )
-        return ColorManager.compress_frame(result)
-
-    def _render_color(self, img: Image.Image, intensity_range: float) -> str:
-        img = img.convert("RGB")
-        ascii_image: list[str] = []
-
-        pixels: RGBPixelSequence = list(img.getdata())
-        for pixel in pixels:
-            r, g, b = pixel
-            if r == g == b == 0:
-                ascii_image.append(" ")
-            else:
-                color_code = ColorManager.rgb_to_ansi(r, g, b)
-                ascii_char = self.ascii_chars[int((r + g + b) / 3 / intensity_range)]
-                ascii_image.append(color_code + ascii_char)
-
-        ascii_image.append(ColorManager.reset_color())
-        return "".join(ascii_image)
-
-    def _render_grayscale(self, img: Image.Image, intensity_range: float) -> str:
-        img = img.convert("L")
-
-        pixel_values: GrayscalePixelSequence = list(img.getdata())
-        ascii_image = "".join(
-            [
-                self.ascii_chars[int(pixel_value / intensity_range)]
-                for pixel_value in pixel_values
-            ]
-        )
-        return self.apply_frame_color(ascii_image)
-
-
-class BrailleRenderer(BaseRenderer):
-    """Renderer that converts images to braille patterns."""
-
-    BRAILLE_PATTERN_BASE = 0x2800
-    DOT_MAPPING = {
-        (0, 0): 0x01,  # top-left 1/1
-        (1, 0): 0x08,  # top-right 1/2
-        (0, 1): 0x02,  # middle-left 2/1
-        (1, 1): 0x10,  # middle-right 2/2
-        (0, 2): 0x04,  # bottom-left 3/1
-        (1, 2): 0x20,  # bottom-right 3/2
-        (0, 3): 0x40,  # lower-left 4/1
-        (1, 3): 0x80,  # lower-right 4/2
-    }
-
-    @override
-    def render(self, img: Image.Image, width: int, height: int) -> str:
-        target_width = width * 2
-        target_height = height * 4
-        img = img.resize((target_width, target_height), Image.Resampling.LANCZOS)
-        gray_img = img.convert("L")
-        threshold = self._calculate_otsu_threshold(gray_img)
-        result = self._convert_to_braille(img, gray_img, threshold)
-        return ColorManager.compress_frame(result)
-
-    def _calculate_otsu_threshold(self, gray_img: Image.Image) -> int:
+        Returns:
+            The optimal threshold value (0-255)
+        """
         hist = [0] * 256
         pixels: GrayscalePixelSequence = list(gray_img.getdata())
         for pixel in pixels:
@@ -262,6 +195,122 @@ class BrailleRenderer(BaseRenderer):
 
         return threshold
 
+
+class TextRenderer(BaseRenderer):
+    """Renderer that converts images to ASCII text characters."""
+
+    styles = {
+        "default": ".-':_,^=;><+!rc*/z?sLTv)J7(|Fi{C}fI31tlu[neoZ5Yxjya]2ESwqkP6h9d4VpOGbUAKXHm8RD#$Bg0MNWQ%&@",
+        "legacy": ".:-=+*#%@",
+        "blockNoColor": " ▒▓█",
+        "block": "▒▓█",
+        "blockv2": "█████████",
+    }
+
+    def __init__(
+        self,
+        style: str,
+        color: bool = False,
+        frame_color: RGBPixel | None = None,
+        transparent: bool = False,
+    ):
+        super().__init__(
+            style=style, color=color, frame_color=frame_color, transparent=transparent
+        )
+        self.ascii_chars = self.styles[style]
+
+    @override
+    def render(self, img: Image.Image, width: int, height: int) -> str:
+        img = img.resize((width, height), Image.Resampling.LANCZOS)
+        intensity_range = 255 / (len(self.ascii_chars) - 1)
+        result = (
+            self._render_color(img, intensity_range)
+            if self.color
+            else self._render_grayscale(img, intensity_range)
+        )
+        return ColorManager.compress_frame(result)
+
+    def _render_color(self, img: Image.Image, intensity_range: float) -> str:
+        img = img.convert("RGB")
+        ascii_image: list[str] = []
+
+        threshold = 0
+        if self.transparent:
+            gray_img = img.convert("L")
+            threshold = self.calculate_otsu_threshold(gray_img)
+            threshold = max(10, int(threshold * 0.4))
+
+        pixels: RGBPixelSequence = list(img.getdata())
+        for pixel in pixels:
+            r, g, b = pixel
+            brightness = (r + g + b) / 3
+
+            if self.transparent and brightness < threshold:
+                ascii_image.append(" ")
+            elif r == g == b == 0:
+                ascii_image.append(" ")
+            else:
+                color_code = ColorManager.rgb_to_ansi(r, g, b)
+                ascii_char = self.ascii_chars[int(brightness / intensity_range)]
+                ascii_image.append(color_code + ascii_char)
+
+        ascii_image.append(ColorManager.reset_color())
+        return "".join(ascii_image)
+
+    def _render_grayscale(self, img: Image.Image, intensity_range: float) -> str:
+        img = img.convert("L")
+
+        pixel_values: GrayscalePixelSequence = list(img.getdata())
+
+        if self.transparent:
+            threshold = self.calculate_otsu_threshold(img)
+            threshold = max(10, int(threshold * 0.2))
+
+            ascii_chars = []
+            for pixel_value in pixel_values:
+                if pixel_value < threshold:
+                    ascii_chars.append(" ")
+                else:
+                    ascii_chars.append(
+                        self.ascii_chars[int(pixel_value / intensity_range)]
+                    )
+            ascii_image = "".join(ascii_chars)
+        else:
+            ascii_image = "".join(
+                [
+                    self.ascii_chars[int(pixel_value / intensity_range)]
+                    for pixel_value in pixel_values
+                ]
+            )
+
+        return self.apply_frame_color(ascii_image)
+
+
+class BrailleRenderer(BaseRenderer):
+    """Renderer that converts images to braille patterns."""
+
+    BRAILLE_PATTERN_BASE = 0x2800
+    DOT_MAPPING = {
+        (0, 0): 0x01,  # top-left 1/1
+        (1, 0): 0x08,  # top-right 1/2
+        (0, 1): 0x02,  # middle-left 2/1
+        (1, 1): 0x10,  # middle-right 2/2
+        (0, 2): 0x04,  # bottom-left 3/1
+        (1, 2): 0x20,  # bottom-right 3/2
+        (0, 3): 0x40,  # lower-left 4/1
+        (1, 3): 0x80,  # lower-right 4/2
+    }
+
+    @override
+    def render(self, img: Image.Image, width: int, height: int) -> str:
+        target_width = width * 2
+        target_height = height * 4
+        img = img.resize((target_width, target_height), Image.Resampling.LANCZOS)
+        gray_img = img.convert("L")
+        threshold = self.calculate_otsu_threshold(gray_img)
+        result = self._convert_to_braille(img, gray_img, threshold)
+        return ColorManager.compress_frame(result)
+
     def _convert_to_braille(
         self, color_img: Image.Image, gray_img: Image.Image, threshold: int
     ) -> str:
@@ -288,12 +337,14 @@ class BrailleRenderer(BaseRenderer):
                             continue
 
                         idx: int = py * width + px
-                        if (
-                            idx < len(gray_pixels)
-                            and gray_pixels[idx] > threshold * 0.8
-                        ):
-                            code |= self.DOT_MAPPING[(dx, dy)]
-                            active_dots.append(color_pixels[idx])
+                        if idx < len(gray_pixels):
+                            pixel_threshold = threshold * 0.8
+                            if self.transparent:
+                                pixel_threshold = threshold * 1.2
+
+                            if gray_pixels[idx] > pixel_threshold:
+                                code |= self.DOT_MAPPING[(dx, dy)]
+                                active_dots.append(color_pixels[idx])
 
                 if active_dots:
                     if self.color:
@@ -386,7 +437,11 @@ class RendererFactory:
 
     @classmethod
     def create_renderer(
-        cls, style: str, color: bool = False, frame_color: RGBPixel | None = None
+        cls,
+        style: str,
+        color: bool = False,
+        frame_color: RGBPixel | None = None,
+        transparent: bool = False,
     ) -> BaseRenderer:
         """Create a renderer instance based on the specified style.
 
@@ -394,6 +449,7 @@ class RendererFactory:
             style: The rendering style to use
             color: Whether to enable color rendering
             frame_color: Optional frame color as RGB tuple
+            transparent: Whether to enable transparent background for low brightness pixels
 
         Raises:
             InvalidRenderStyleError: If the specified style is not registered
@@ -401,7 +457,9 @@ class RendererFactory:
         if not cls.has_renderer(style):
             raise InvalidRenderStyleError(style)
 
-        return cls._renderers[style](style=style, color=color, frame_color=frame_color)
+        return cls._renderers[style](
+            style=style, color=color, frame_color=frame_color, transparent=transparent
+        )
 
 
 # built-in renderers
@@ -421,9 +479,10 @@ class RendererManager:
         style: str = "default",
         color: bool = False,
         frame_color: RGBPixel | None = None,
+        transparent: bool = True,
     ) -> None:
         self.renderer = RendererFactory.create_renderer(
-            style=style, color=color, frame_color=frame_color
+            style=style, color=color, frame_color=frame_color, transparent=transparent
         )
 
     def hide_cursor(self) -> None:

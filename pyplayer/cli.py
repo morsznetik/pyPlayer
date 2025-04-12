@@ -226,6 +226,15 @@ class RenderingArgumentGroup(BaseArgumentGroup):
             + "This does not directly set terminal character dimensions.\n"
             + "(Default: native)",
         )
+        rendering_group.add_argument(
+            "--no-transparent",
+            "-ntr",
+            action="store_false",
+            dest="transparent",
+            help="Disable transparent background for low brightness pixels.\n"
+            + "This makes dark areas of the video appear solid instead of transparent.\n"
+            + "(Default: enabled)",
+        )
 
 
 class VideoArgumentGroup(BaseArgumentGroup):
@@ -338,6 +347,7 @@ def main() -> None:
             num_threads=args.threads,
             diff_mode=args.diff_mode,
             output_resolution=args.output_resolution,
+            transparent=args.transparent,
         ).play()
 
     except PyPlayerError as e:

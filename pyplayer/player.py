@@ -41,6 +41,7 @@ class Player:
         num_threads: int = 0,
         diff_mode: str = "none",
         output_resolution: tuple[int, int] | None = (640, 480),
+        transparent: bool = False,
     ) -> None:
         self.processor = VideoProcessor(video_path)
         self.frames_dir, self.audio_path, detected_fps = self.processor.process_video(
@@ -68,7 +69,10 @@ class Player:
         self.diff_render_time = 0.0
 
         self.renderer = RendererManager(
-            style=render_style, color=color, frame_color=frame_color
+            style=render_style,
+            color=color,
+            frame_color=frame_color,
+            transparent=transparent,
         )
 
         self.pre_rendered_frames = {}
