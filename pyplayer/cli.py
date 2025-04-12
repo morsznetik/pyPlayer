@@ -219,7 +219,7 @@ class RenderingArgumentGroup(BaseArgumentGroup):
             "-or",
             type=self.parser.get_type("output_resolution"),
             default="native",
-            metavar="WxH|native",
+            metavar="W,H|native",
             help="Internal processing resolution for video frames.\n"
             + "Use 'width,height' (e.g., 160,90) or 'native'.\n"
             + "Lower resolutions can improve performance but reduce detail.\n"

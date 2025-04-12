@@ -100,35 +100,35 @@ pyplayer video_path [options]
 
 #### Required Arguments
 
-- **video_path**: Path to the video file
+- **video_path**: Path to the video file to play.
 
 #### Optional Arguments
 
-- `--fps`, `-f`: Frames per second (default: video's native FPS) - will overwrite the video's fps
-- `--volume`, `-v`: Audio volume from 0-100 (default: 100)
-- `--render`, `-r`: ASCII render style (choices: default, legacy, blockNoColor, block, blockv2, braille)
-- `--skip-threshold`, `-s`: Time threshold to skip frames (default: 0.012)
-  *Found it best to work at 12ms, but it's not a magic number, it's just what worked for me.*
-- `--no-frame-skip`, `-nfs`: Disable frame skipping
-  *Not recommended, it will cause sync issues with the audio.*
-- `--color`, `-c`: Enable color rendering
-- `--debug`, `-d`: Enable debug information
-- `--frame-color`: Custom RGB color for frame in the format R,G,B
-  *Nice option when you want a grayscale video to have some color.*
-- `--grayscale`, `-g`: Convert video to grayscale
-  *This will force the conversion of a video to grayscale, can eliminate some brightness issues when rendering without color.*
-- `--color-smoothing`, `-cs`: Apply color smoothing to video
-  *Generally not recommended, can cause some blockiness and ghosting, but feel free to play around with it*
-- `--color-smoothing-params`, `-csp`: Parameters for color smoothing in format 'param1=value1,param2=value2'
-  *Customize the color smoothing algorithm with the following parameters:*
-  - *luma_spatial: Spatial luma strength (default: 4.0) - controls smoothing intensity for brightness*
-  - *chroma_spatial: Spatial chroma strength (default: 3.0) - controls smoothing intensity for colors*
-  - *luma_tmp: Temporal luma strength (default: 6.0) - controls smoothing between frames for brightness*
-  - *chroma_tmp: Temporal chroma strength (default: 4.5) - controls smoothing between frames for colors*
-  *Higher values result in more aggressive smoothing. Lower values preserve more detail.*
-- `--pre-render`, `-pr`: Pre-render video frames (uses more RAM)
-  *Not recommended, it will use a lot of RAM, but useful if you want to play a video at a large resolution or make the video play smoother if you do not have a powerful enough CPU. For a 3 minute long 853x226, colored, braille-rendered video I found it to use around 9GB of RAM, but it's still not a bad option if you want to play a video at a large resolution.*
-- `--threads`, `-t`: Number of threads for frame rendering (default: number of CPU cores)
+- **Core Options**:
+  - `--fps`, `-f`: Force playback at specific frames per second (default: video's native FPS).
+  - `--volume`, `-v`: Set audio volume percentage (0-100) (default: 100).
+  - `--debug`, `-d`: Enable detailed debug logging during playback.
+
+- **Rendering Options**:
+  - `--frame-color`: Set the color of the frame border (RGB values). Example: --frame-color 255,0,0 (red).
+  - `--render`, `-r`: Select the ASCII rendering style (choices: default, legacy, blockNoColor, block, blockv2, braille) (default: default).
+  - `--diff-mode`, `-dm`: Optimize rendering by only updating changed parts (choices: line, char, none) (default: none).
+  - `--output-resolution`, `-or`: Internal processing resolution for video frames (format: W,H|native) (default: native).
+  - `--no-transparent`, `-ntr`: Disable transparent background for low brightness pixels (default: enabled).
+
+- **Color Options**:
+  - `--color`, `-c`: Enable color rendering (if supported by terminal/style).
+  - `--grayscale`, `-g`: Convert video to grayscale before rendering.
+
+- **Color Smoothing (Experimental)**:
+  - `--color-smoothing`, `-cs`: Apply video noise reduction (smoothing) filter.
+  - `--color-smoothing-params`, `-csp`: Fine-tune color smoothing filter parameters (format: 'param1=value1,param2=value2').
+
+- **Performance Tuning**:
+  - `--skip-threshold`, `-s`: Time threshold (in seconds) for frame skipping (default: 0.012).
+  - `--no-frame-skip`, `-nfs`: Disable frame skipping entirely.
+  - `--pre-render`, `-pr`: Attempt to pre-render video frames ahead of time.
+  - `--threads`, `-t`: Number of threads used for parallel frame processing (default: system CPU count).
 - `--diff-mode`, `-dm`: Frame difference rendering mode (choices: line, char, none, default: none)
   *The current implementations may not improve performance and could potentially reduce it. Try it, depends on your hardware*
 - `--output-resolution`, `-or`: Custom resolution for video processing (default: native)
