@@ -1,4 +1,4 @@
-name: Test, build, deploy
+name: Test, Build, Deploy
 
 on:
   push:
@@ -37,11 +37,19 @@ jobs:
       - name: Install uv
         uses: astral-sh/setup-uv@v5
 
+      - name: Cache uv dependencies
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/uv
+          key: ${{ runner.os }}-uv-${{ hashFiles('**/uv.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-uv-
+
       - name: Create virtual environment
         run: uv venv
 
       - name: Generate lock file
-        run: uv pip compile pyproject.toml -o uv.lock
+        run: uv pip compile pyproject.toml --all-extras
 
       - name: Install all dependencies
         run: uv pip install -r pyproject.toml --all-extras -e .
@@ -52,10 +60,10 @@ jobs:
 
   build-executable:
     runs-on: windows-latest
-
     if: github.event_name == 'workflow_dispatch'
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout Repository
+        uses: actions/checkout@v4
 
       - name: Set up Python
         uses: actions/setup-python@v5
