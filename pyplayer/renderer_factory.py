@@ -36,76 +36,98 @@ class ColorManager:
 
     @staticmethod
     def compress_frame(text: str) -> str:
+        """Compress a frame by optimizing ANSI color codes.
+
+        This method reduces the amount of ANSI escape sequences by combining
+        consecutive characters with the same color code.
+
+        Args:
+            text: The text to compress
+
+        Returns:
+            The compressed text with optimized ANSI color codes
+        """
         if not text:
             return text
 
         lines = text.split("\n")
-        out = []
+        compressed_lines: list[str] = []
 
-        for ln in lines:
-            if not ln or "\033[" not in ln:
-                out.append(ln)
+        for line in lines:
+            if not line or "\033[" not in line:
+                compressed_lines.append(line)
                 continue
 
-            segments: list[ColorTextSegment] = []
-            i = 0
-            current_color = None
-
-            while i < len(ln):
-                if ln.startswith("\033[38;2;", i):
-                    end = ln.find("m", i)
+            tokens: list[tuple[str, str]] = []
+            i: int = 0
+            while i < len(line):
+                if line.startswith("\033[", i):
+                    end: int = line.find("m", i)
                     if end != -1:
-                        if (
-                            current_color is not None
-                            and segments
-                            and segments[-1][0] == current_color
-                        ):
-                            segments[-1] = (
-                                current_color,
-                                segments[-1][1] + ln[i : end + 1],
-                            )
-                        else:
-                            segments.append((ln[i : end + 1], ""))
-                        current_color = ln[i : end + 1]
+                        tokens.append(
+                            ("ansi", line[i : end + 1])
+                        )  # capture ANSI escape
                         i = end + 1
-                        continue
-                elif ln.startswith("\033[0m", i):
-                    if (
-                        current_color is not None
-                        and segments
-                        and segments[-1][0] == current_color
-                    ):
-                        segments[-1] = (current_color, segments[-1][1] + ln[i : i + 4])
-                    current_color = None
-                    i += 4
-                    continue
-
-                if current_color is not None:
-                    if segments and segments[-1][0] == current_color:
-                        segments[-1] = (current_color, segments[-1][1] + ln[i])
                     else:
-                        segments.append((current_color, ln[i]))
+                        tokens.append(("text", line[i]))  # capture non-ANSI text
+                        i += 1
                 else:
-                    segments.append((None, ln[i]))
-                i += 1
+                    tokens.append(("text", line[i]))  # capture non-ANSI text
+                    i += 1
 
-            if not segments:
-                out.append(ln)
-                continue
+            optimized: list[tuple[str | None, str]] = []
+            current_color: str | None = None
+            current_text = ""
+            reset_code = "\033[0m"
 
-            result = []
-            for color, text in segments:
-                if color:
-                    result.append(color + text)
+            for token_type, token_value in tokens:
+                if token_type == "ansi":
+                    if token_value.startswith(
+                        "\033[38;2;"
+                    ):  # checks for true color escape
+                        if current_color != token_value and current_text:
+                            optimized.append(
+                                (current_color, current_text)
+                            )  # append accumulated text with color
+                            current_text = ""
+                        current_color = token_value
+                    elif token_value == reset_code:  # reset to default color
+                        if current_text:
+                            optimized.append((current_color, current_text))
+                            current_text = ""
+                        optimized.append((reset_code, ""))  # append reset code
+                        current_color = None
+                    else:
+                        if current_text:
+                            optimized.append((current_color, current_text))
+                            current_text = ""
+                        optimized.append(
+                            (token_value, "")
+                        )  # append other ANSI codes as-is
                 else:
-                    result.append(text)
+                    current_text += token_value  # add non-ANSI text
 
-            if any(color for color, _ in segments):
-                result.append(ColorManager.reset_color())
+            if current_text:
+                optimized.append((current_color, current_text))  # add remaining text
 
-            out.append("".join(result))
+            compressed_line = ""
+            for color, segment_text in optimized:
+                if color is None:
+                    compressed_line += segment_text
+                elif color == reset_code:
+                    compressed_line += reset_code  # add reset sequence
+                else:
+                    compressed_line += color + segment_text  # add color with text
 
-        return "\n".join(out)
+            if any(color is not None and color != reset_code for color, _ in optimized):
+                if not compressed_line.endswith(reset_code):
+                    compressed_line += (
+                        reset_code  # ensure reset at the end of colored text
+                    )
+
+            compressed_lines.append(compressed_line)
+
+        return "\n".join(compressed_lines)
 
 
 class BaseRenderer(ABC):
