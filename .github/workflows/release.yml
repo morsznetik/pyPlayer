@@ -32,9 +32,8 @@ jobs:
       - name: Create virtual environment
         run: uv venv
 
-      - name: Generate lock file if not exists
-        run: if (-not(Test-Path -Path "uv.lock")) { uv pip compile pyproject.toml -o uv.lock }
-        shell: pwsh
+      - name: Generate lock file
+        run: uv pip compile pyproject.toml --all-extras
 
       - name: Install dependencies
         run: |

@@ -37,6 +37,9 @@ jobs:
       - name: Install uv
         uses: astral-sh/setup-uv@v5
 
+      - name: Generate lock file
+        run: uv pip compile pyproject.toml --all-extras
+
       - name: Cache uv dependencies
         uses: actions/cache@v3
         with:
@@ -47,9 +50,6 @@ jobs:
 
       - name: Create virtual environment
         run: uv venv
-
-      - name: Generate lock file
-        run: uv pip compile pyproject.toml --all-extras
 
       - name: Install all dependencies
         run: uv pip install -r pyproject.toml --all-extras -e .
