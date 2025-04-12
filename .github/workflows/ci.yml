@@ -43,8 +43,8 @@ jobs:
       - name: Generate lock file
         run: uv pip compile pyproject.toml -o uv.lock
 
-      - name: Install dependencies
-        run: uv pip install -r pyproject.toml -e .
+      - name: Install all dependencies
+        run: uv pip install -r pyproject.toml --all-extras -e .
 
       - name: Run Basedpyright
         run: |
