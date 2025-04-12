@@ -36,8 +36,6 @@ jobs:
 
       - name: Install uv
         uses: astral-sh/setup-uv@v5
-        with:
-          cache-dependency-path: 'uv.lock'
 
       - name: Create virtual environment
         run: uv venv
@@ -66,8 +64,6 @@ jobs:
 
       - name: Install uv
         uses: astral-sh/setup-uv@v5
-        with:
-          cache-dependency-path: 'uv.lock'
 
       - name: Create virtual environment
         run: uv venv
@@ -83,7 +79,7 @@ jobs:
         shell: cmd
 
       - name: Zip executable
-        run: Compress-Archive -Path dist\pyplayer.exe,README.md -DestinationPath dist\pyplayer-windows.zip
+        run: Compress-Archive -Path dist\pyplayer.exe,README.md,LICENSE -DestinationPath dist\pyplayer-windows.zip
         shell: pwsh
 
       - name: Upload executable
