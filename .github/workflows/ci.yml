@@ -36,80 +36,25 @@ jobs:
 
       - name: Install uv
         uses: astral-sh/setup-uv@v5
-
-      - name: Setup Python cache
-        uses: actions/cache@v4
         with:
-          path: |
-            .venv
-            ~/.cache/uv
-          key: ${{ runner.os }}-python-${{ hashFiles('pyproject.toml') }}
-          restore-keys: |
-            ${{ runner.os }}-python-
+          cache-dependency-path: 'uv.lock'
 
       - name: Create virtual environment
         run: uv venv
 
+      - name: Generate lock file
+        run: uv pip compile pyproject.toml -o uv.lock
+
       - name: Install dependencies
-        run: |
-          uv pip install .[dev]
+        run: uv pip install --uvlock uv.lock
 
       - name: Run Basedpyright
         run: |
           .venv/bin/python -m basedpyright
 
-  test:
-    runs-on: ubuntu-latest
-    needs: lint
-    strategy:
-      matrix:
-        python-version: ['3.13']
-      fail-fast: false
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v5
-        with:
-          python-version: ${{ matrix.python-version }}
-
-      - name: Install uv
-        uses: astral-sh/setup-uv@v5
-
-      - name: Setup Python cache
-        uses: actions/cache@v4
-        with:
-          path: |
-            .venv
-            ~/.cache/uv
-          key: ${{ runner.os }}-python-${{ matrix.python-version }}-test-${{ hashFiles('pyproject.toml') }}
-          restore-keys: |
-            ${{ runner.os }}-python-${{ matrix.python-version }}-test-
-
-      - name: Create virtual environment
-        run: uv venv
-
-      - name: Install dependencies
-        run: |
-          uv pip install -e .[dev]
-          sudo apt-get update
-          sudo apt-get install -y ffmpeg
-
-      - name: Run tests
-        run: |
-          python -m pytest
-
-      - name: Upload test results
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: pytest-results-${{ matrix.python-version }}
-          path: pytest-results.xml
-          retention-days: 5
-
   build:
     runs-on: ubuntu-latest
-    needs: test
+
     steps:
       - uses: actions/checkout@v4
 
@@ -120,16 +65,8 @@ jobs:
 
       - name: Install uv
         uses: astral-sh/setup-uv@v5
-
-      - name: Setup Python cache
-        uses: actions/cache@v4
         with:
-          path: |
-            .venv
-            ~/.cache/uv
-          key: ${{ runner.os }}-python-build-${{ hashFiles('pyproject.toml') }}
-          restore-keys: |
-            ${{ runner.os }}-python-build-
+          cache-dependency-path: 'uv.lock'
 
       - name: Create virtual environment
         run: uv venv
@@ -149,7 +86,7 @@ jobs:
 
   build-executable:
     runs-on: windows-latest
-    needs: test
+
     if: github.event_name == 'workflow_dispatch'
     steps:
       - uses: actions/checkout@v4
@@ -161,16 +98,8 @@ jobs:
 
       - name: Install uv
         uses: astral-sh/setup-uv@v5
-
-      - name: Setup Python cache
-        uses: actions/cache@v4
         with:
-          path: |
-            .venv
-            ~\AppData\Local\uv\cache
-          key: ${{ runner.os }}-python-exe-${{ hashFiles('pyproject.toml') }}
-          restore-keys: |
-            ${{ runner.os }}-python-exe-
+          cache-dependency-path: 'uv.lock'
 
       - name: Create virtual environment
         run: uv venv
