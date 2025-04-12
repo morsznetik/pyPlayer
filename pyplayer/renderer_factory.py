@@ -1,3 +1,4 @@
+# pyright: reportUnknownArgumentType=false,reportUnknownMemberType=false
 from functools import lru_cache
 import sys
 from abc import ABC, abstractmethod
