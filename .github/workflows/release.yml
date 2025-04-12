@@ -9,31 +9,44 @@ jobs:
   build-executable:
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: '3.13'
 
       - name: Install uv
         uses: astral-sh/setup-uv@v5
+        with:
+          cache-dependency-path: 'uv.lock'
 
       - name: Create virtual environment
         run: uv venv
+
+      - name: Generate lock file if not exists
+        run: if (-not(Test-Path -Path "uv.lock")) { uv pip compile pyproject.toml -o uv.lock }
+        shell: pwsh
 
       - name: Install dependencies
         run: |
           uv pip install -e .
           uv pip install pyinstaller
 
-      - name: Build executable
+      - name: Extract version from tag
+        id: get_version
+        run: echo "VERSION=$($env:GITHUB_REF_NAME -replace '^v', '')" >> $env:GITHUB_OUTPUT
+        shell: pwsh
+        env:
+          GITHUB_REF_NAME: ${{ github.ref_name }}
+
+      - name: Build executable using spec file
         run: |
-          .venv\Scripts\python.exe -m PyInstaller --onefile --name pyplayer --add-data "pyplayer;pyplayer" pyplayer\__init__.py
+          .venv\Scripts\python.exe -m PyInstaller pyplayer.spec --distpath dist
         shell: cmd
 
-      - name: Zip executable
-        run: Compress-Archive -Path dist\pyplayer.exe -DestinationPath dist\pyplayer-windows.zip
+      - name: Zip executable with README
+        run: Compress-Archive -Path dist\pyplayer.exe,README.md,LICENSE -DestinationPath dist\pyplayer-windows.zip
         shell: pwsh
 
       - name: Upload executable
@@ -48,11 +61,31 @@ jobs:
     permissions:
       contents: write
     steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
       - name: Download build artifact
         uses: actions/download-artifact@v4
         with:
           name: pyplayer-windows
           path: dist
+
+      - name: Extract version from tag
+        id: get_version
+        run: echo "VERSION=${GITHUB_REF_NAME#v}" >> $GITHUB_OUTPUT
+        env:
+          GITHUB_REF_NAME: ${{ github.ref_name }}
+
+      - name: Generate changelog
+        id: changelog
+        run: |
+          PREV_TAG=$(git describe --tags --abbrev=0 ${{ github.ref_name }}^ 2>/dev/null || echo "")
+          if [ -z "$PREV_TAG" ]; then
+            echo "CHANGELOG=$(git log --pretty=format:"- %s" ${{ github.ref_name }})" >> $GITHUB_OUTPUT
+          else
+            echo "CHANGELOG=$(git log --pretty=format:"- %s" $PREV_TAG..${{ github.ref_name }})" >> $GITHUB_OUTPUT
+          fi
 
       - name: Rename artifact
         run: |
@@ -67,10 +100,15 @@ jobs:
           draft: true
           prerelease: ${{ contains(github.ref_name, '-beta') }}
           body: |
-            / notes here /
+            # pyPlayer ${{ steps.get_version.outputs.VERSION }}
 
-            **For windows users:**
-            Download the zip file called "**pyplayer-windows-${{ github.ref_name }}.zip**". Use it in your terminal, or you can add it to your path so you can use it from anywhere!
+            ## Changes in this release:
+            ${{ steps.changelog.outputs.CHANGELOG }}
+
+            ## Installation
+
+            **For Windows users:**
+            Download the zip file called "**pyplayer-windows-${{ github.ref_name }}.zip**". Extract it and use the executable in your terminal, or add it to your PATH to use it from anywhere.
 
           artifacts: dist/pyplayer-windows-${{ github.ref_name }}.zip
           token: ${{ secrets.GITHUB_TOKEN }}
