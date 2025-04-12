@@ -1,3 +1,4 @@
+from functools import lru_cache
 import sys
 from abc import ABC, abstractmethod
 from collections.abc import Sequence
@@ -16,6 +17,7 @@ type ColorTextSegment = tuple[str | None, str]
 
 class ColorManager:
     @staticmethod
+    @lru_cache(maxsize=None)
     def rgb_to_ansi(r: int, g: int, b: int) -> str:
         return f"\033[38;2;{r};{g};{b}m"
 
