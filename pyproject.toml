@@ -40,5 +40,3 @@ reportAny = false
 reportExplicitAny = false
 reportUnannotatedClassAttribute = false
 reportUnusedCallResult = false
-reportUnknownArgumentType = false
-reportUnknownMemberType = false
