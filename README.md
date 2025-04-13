@@ -192,7 +192,7 @@ That's it! Ruff and Typos will automatically run as well.
 - [x] Improve color smoothing algorithm
 - [x] Create a custom parser and validator for CLI args
 - [x] Transparency toggle[^3]
-- [ ] Improve CI/CD pipeline
+- [x] Improve CI/CD pipeline
 - [ ] True[^4] multi-threaded parallelism[^5]
 - [ ] Support for playing Youtube videos straight from the URL - potentially something for 1.0, haven't decided yet
 
