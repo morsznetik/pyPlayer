@@ -10,6 +10,12 @@ Contributions are very much welcome! Please open an issue or submit a pull reque
 
 ## Features
 
+### YouTube Support
+
+- Play videos directly from YouTube URLs
+- Automatic video downloading and cleanup
+- Optional dependency
+
 ### Multiple ASCII Rendering Styles
 
 - **default**: Detailed ASCII character set
@@ -76,7 +82,12 @@ Pre-built executables available on the [releases page](https://github.com/morszn
 ```zsh
 git clone https://github.com/morsznetik/pyPlayer
 cd pyPlayer
+
+# Basic installation
 uv pip install -e .
+
+# With YouTube support
+uv pip install -e .[youtube]
 
 # or alternatively:
 uv pip install git+https://github.com/morsznetik/pyPlayer.git
@@ -90,6 +101,9 @@ pyplayer path/to/your/video.mp4
 
 # With custom rendering style and color
 pyplayer path/to/your/video.mp4 --render braille --color
+
+# Play directly from YouTube URL
+pyplayer https://www.youtube.com/watch?v=dQw4w9WgXcQ --render braille --color
 ```
 
 ### Command Line Options
@@ -156,7 +170,7 @@ uv venv
 source venv/bin/activate  # On Windows: venv\Scripts\activate
 
 # Install development dependencies
-uv pip install -r pyproject.toml --all-extras
+uv pip install -r pyproject.toml --all-extras --reinstall -e .
 ```
 
 ### Code Style
@@ -194,7 +208,7 @@ That's it! Ruff and Typos will automatically run as well.
 - [x] Transparency toggle[^3]
 - [x] Improve CI/CD pipeline
 - [ ] True[^4] multi-threaded parallelism[^5]
-- [ ] Support for playing Youtube videos straight from the URL - potentially something for 1.0, haven't decided yet
+- [x] Support for playing Youtube videos straight from the URL
 
 ## Known Issues
 

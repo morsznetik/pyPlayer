@@ -1,13 +1,23 @@
+# pyright:reportPossiblyUnboundVariable=false
 import sys
 import argparse
 import multiprocessing
 import traceback
 from abc import ABC, abstractmethod
+from urllib.parse import urlparse
 from typing import Any, Callable, override
 from functools import wraps
 from .player import Player
-from .exceptions import PyPlayerError
+from .exceptions import PyPlayerError, YouTubeError, YouTubeDependencyError
 from .renderer_factory import RendererFactory, RGBPixel
+
+_youtube_support = False
+try:
+    from .youtube import YouTubeDownloader
+
+    _youtube_support = True
+except ImportError:
+    raise
 
 TypeFunc = Callable[[str], Any]
 
@@ -156,7 +166,18 @@ class PlayerArgumentParser(argparse.ArgumentParser):
 class CoreArgumentGroup(BaseArgumentGroup):
     @override
     def add_arguments(self) -> None:
-        self.parser.add_argument("video_path", help="Path to the video file to play.")
+        if _youtube_support:
+            self.parser.add_argument(
+                "video_path_or_url",
+                help="Path to the video file to play or youtube url.",
+            )
+        else:
+            self.parser.add_argument(
+                "video_path",
+                help="Path to the video file to play.",
+                name="video_path_or_url",
+            )
+
         self.parser.add_argument(
             "--fps",
             "-f",
@@ -326,12 +347,37 @@ def parse_cli_args() -> argparse.Namespace:
 
 def main() -> None:
     """Main application entry point."""
+
+    def is_youtube_url(url: str) -> bool:
+        return urlparse(url).netloc in [
+            "youtube.com",
+            "www.youtube.com",
+            "youtu.be",
+            "m.youtube.com",
+            "music.youtube.com",
+        ]
+
     args = parse_cli_args()
+    video_path_or_url = args.video_path_or_url
 
     player = None
+    youtube_downloader = None
     try:
+        if _youtube_support:
+            if is_youtube_url(video_path_or_url):
+                print("Detected YouTube URL. Downloading video...")
+                try:
+                    youtube_downloader = YouTubeDownloader()
+                    video_path_or_url = youtube_downloader.download_video(
+                        video_path_or_url
+                    )
+                except YouTubeError as e:
+                    raise YouTubeError(f"Error downloading YouTube video: {e}") from e
+        elif not _youtube_support and is_youtube_url(video_path_or_url):
+            raise YouTubeDependencyError
+
         player = Player(
-            video_path=args.video_path,
+            video_path=video_path_or_url,
             fps=args.fps,
             volume=args.volume,
             render_style=args.render,
@@ -366,6 +412,8 @@ def main() -> None:
             traceback.print_exc()
         sys.exit(1)
     finally:
+        if youtube_downloader:
+            youtube_downloader.cleanup()
         if player:
             player.processor.cleanup()
         if sys.exc_info()[0] is KeyboardInterrupt:

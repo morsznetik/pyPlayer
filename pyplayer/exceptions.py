@@ -10,6 +10,21 @@ class PyPlayerError(Exception):
         super().__init__(self.message)
 
 
+class YouTubeError(PyPlayerError):
+    """Exception raised for YouTube-related errors"""
+
+    pass
+
+
+class YouTubeDependencyError(YouTubeError):
+    """Exception raised when YouTube dependencies are missing"""
+
+    def __init__(self) -> None:
+        super().__init__(
+            "yt-dlp is required for YouTube support. " + "For more info see README.md"
+        )
+
+
 # Video Processing Errors
 class VideoProcessingError(PyPlayerError):
     """Base class for errors related to video processing."""
