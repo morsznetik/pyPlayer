@@ -31,9 +31,13 @@ Contributions are very much welcome! Please open an issue or submit a pull reque
   - Slow terminal performance
   - Best-ish color support (*will be reworked with a smarter brightness algorithm, see TODO*)
 - **braille**: Unicode 2x4 braille pattern rendering
-  - Best quality, slow rendering
+  - Best* quality, slow rendering
   - Slow terminal performance
   - Very good color support (*recommended for high-complexity videos, bad with videos with low dynamic range*)
+- **halfblock**: Unicode Lower half block (▄) rendering
+  - High quality, slow rendering
+  - Good terminal performance
+  - Excellent color support (*achieves double vertical resolution by using foreground/background colors*)
 - others **(these are very much unsupported and are deprecated!)**:
   - **blockNoColor**: hacky way to have transparency with block rendering, as the name suggests best way to use it is without color
   - **blockv2**: hacky way to only have pixel-based rendering with only the full block being used
@@ -125,7 +129,7 @@ pyplayer video_path [options]
 
 - **Rendering Options**:
   - `--frame-color`: Set the color of the frame border (RGB values). Example: --frame-color 255,0,0 (red).
-  - `--render`, `-r`: Select the ASCII rendering style (choices: default, legacy, blockNoColor, block, blockv2, braille) (default: default).
+  - `--render`, `-r`: Select the ASCII rendering style (choices: default, legacy, blockNoColor, block, blockv2, braille, halfblock) (default: default).
   - `--diff-mode`, `-dm`: Optimize rendering by only updating changed parts (choices: line, char, none) (default: none).
   - `--output-resolution`, `-or`: Internal processing resolution for video frames (format: W,H|native) (default: native).
   - `--no-transparent`, `-ntr`: Disable transparent background for low brightness pixels (default: enabled).

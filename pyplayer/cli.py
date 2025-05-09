@@ -354,7 +354,6 @@ def main() -> None:
             "www.youtube.com",
             "youtu.be",
             "m.youtube.com",
-            "music.youtube.com",
         ]
 
     args = parse_cli_args()

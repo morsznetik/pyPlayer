@@ -23,6 +23,11 @@ class ColorManager:
         return f"\033[38;2;{r};{g};{b}m"
 
     @staticmethod
+    @lru_cache(maxsize=None)
+    def rgb_to_ansi_bg(r: int, g: int, b: int) -> str:
+        return f"\033[48;2;{r};{g};{b}m"
+
+    @staticmethod
     def reset_color() -> str:
         return "\033[0m"
 
@@ -62,10 +67,10 @@ class ColorManager:
                 continue
 
             tokens: list[tuple[str, str]] = []
-            i: int = 0
+            i = 0
             while i < len(line):
                 if line.startswith("\033[", i):
-                    end: int = line.find("m", i)
+                    end = line.find("m", i)
                     if end != -1:
                         tokens.append(
                             ("ansi", line[i : end + 1])
@@ -387,6 +392,72 @@ class BrailleRenderer(BaseRenderer):
         return self.apply_frame_color("\n".join(braille_text))
 
 
+class HalfBlockRenderer(BaseRenderer):
+    @override
+    def render(self, img: Image.Image, width: int, height: int) -> str:
+        threshold = 0
+        if self.transparent:
+            original_gray_img = img.convert("L")
+            threshold = self.calculate_otsu_threshold(original_gray_img)
+            threshold = max(10, int(threshold * 0.4))
+
+        target_height = height * 2
+        img_resized = img.resize((width, target_height), Image.Resampling.LANCZOS)
+        img_rgb = img_resized.convert("RGB")
+        pixels: RGBPixelSequence = list(img_rgb.getdata())
+
+        result = []
+        for y in range(0, target_height, 2):
+            line = []
+            for x in range(width):
+                upper_idx = y * width + x
+                lower_idx = (y + 1) * width + x if y + 1 < target_height else upper_idx
+
+                upper_pixel = (
+                    pixels[upper_idx] if upper_idx < len(pixels) else (0, 0, 0)
+                )
+                lower_pixel = (
+                    pixels[lower_idx] if lower_idx < len(pixels) else (0, 0, 0)
+                )
+
+                if self.transparent:
+                    upper_brightness = (
+                        upper_pixel[0] + upper_pixel[1] + upper_pixel[2]
+                    ) / 3
+                    lower_brightness = (
+                        lower_pixel[0] + lower_pixel[1] + lower_pixel[2]
+                    ) / 3
+                    avg_brightness = (upper_brightness + lower_brightness) / 2
+                    if avg_brightness < threshold:
+                        line.append(
+                            f"{ColorManager.reset_color()} "
+                        )  # background leaks w/o the reset, it should get compressed tho
+                        continue
+
+                if (
+                    upper_pixel == (0, 0, 0)
+                    and lower_pixel == (0, 0, 0)
+                    and not self.transparent
+                ):
+                    line.append(" ")
+                    continue
+
+                bg_color = ColorManager.rgb_to_ansi_bg(
+                    upper_pixel[0], upper_pixel[1], upper_pixel[2]
+                )
+                fg_color = ColorManager.rgb_to_ansi(
+                    lower_pixel[0], lower_pixel[1], lower_pixel[2]
+                )
+
+                line.append(f"{bg_color}{fg_color}▄")
+
+            result.append(
+                "".join(line) + ColorManager.reset_color()
+            )  # same here background leaks without the final reset
+
+        return ColorManager.compress_frame("\n".join(result))
+
+
 class RendererFactory:
     """Factory class for creating renderers.
 
@@ -490,6 +561,7 @@ class RendererFactory:
 # built-in renderers
 RendererFactory.register_renderer(tuple(TextRenderer.styles.keys()), TextRenderer)
 RendererFactory.register_renderer("braille", BrailleRenderer)
+RendererFactory.register_renderer("halfblock", HalfBlockRenderer)
 
 
 class RendererManager:

@@ -11,8 +11,7 @@ import re
 import numpy as np
 from typing import Callable
 from .video_processor import VideoProcessor
-from .renderer_factory import RendererManager
-from .renderer_factory import RGBPixel
+from .renderer_factory import RendererManager, RGBPixel
 from .exceptions import (
     PyPlayerError,
     FrameNotFoundError,
