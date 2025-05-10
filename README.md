@@ -10,27 +10,40 @@ Contributions are very much welcome! Please open an issue or submit a pull reque
 
 ## Features
 
+### YouTube Support
+
+- Play videos directly from YouTube URLs
+- Automatic video downloading and cleanup
+- Optional dependency
+
 ### Multiple ASCII Rendering Styles
 
 - **default**: Detailed ASCII character set
   - Medium quality, fast rendering
   - Fastest terminal performance
-  - Decent color support (*will look blurry but is arguably the best with high-complexity videos*)
+  - Excellent color support (*will look blurry but is arguably the best with high-complexity videos*)
+- **halfblock**: Unicode Lower half block (▄) rendering (1:1 pixel ratio); recommended for most
+  - High quality, slow-ish rendering
+  - Meh terminal performance
+  - Excellent color support (*achieves double vertical resolution by using foreground/background colors but same drawbacks as the default, it'll look blurry if it's small*)
 - **legacy**: Simple ASCII character set
   - Low quality, fastest rendering
   - Fastest terminal performance
-  - Bad color support (*it works, but doesn't look great*)
-- **block**: Block-based rendering
-  - Very low quality, decently fast rendering
-  - Slow terminal performance
-  - Best-ish color support (*will be reworked with a smarter brightness algorithm, see TODO*)
+  - Poor color support (*it works, but doesn't look great*)
 - **braille**: Unicode 2x4 braille pattern rendering
-  - Best quality, slow rendering
+  - Best* quality, slow rendering
   - Slow terminal performance
-  - Very good color support (*recommended for high-complexity videos, bad with videos with low dynamic range*)
-- others **(these are very much unsupported and are deprecated!)**:
-  - **blockNoColor**: hacky way to have transparency with block rendering, as the name suggests best way to use it is without color
-  - **blockv2**: hacky way to only have pixel-based rendering with only the full block being used
+  - Decent color support (*recommended for high-complexity videos, bad with videos with low dynamic range*)
+
+#### Deprecated Rendering Styles
+
+The following styles are deprecated and will be removed in a future version; they are still useable and show up in the help menu.
+
+Superseded by halfblock:
+
+- **block**: Block-based rendering
+- **blockNoColor**: Hacky way to have transparency with block rendering
+- **blockv2**: Pixel-based rendering with only full blocks
 
 ### Color Support
 
@@ -76,7 +89,12 @@ Pre-built executables available on the [releases page](https://github.com/morszn
 ```zsh
 git clone https://github.com/morsznetik/pyPlayer
 cd pyPlayer
+
+# Basic installation
 uv pip install -e .
+
+# With YouTube support
+uv pip install -e .[youtube]
 
 # or alternatively:
 uv pip install git+https://github.com/morsznetik/pyPlayer.git
@@ -90,6 +108,9 @@ pyplayer path/to/your/video.mp4
 
 # With custom rendering style and color
 pyplayer path/to/your/video.mp4 --render braille --color
+
+# Play directly from YouTube URL
+pyplayer https://www.youtube.com/watch?v=dQw4w9WgXcQ --render braille --color
 ```
 
 ### Command Line Options
@@ -111,7 +132,7 @@ pyplayer video_path [options]
 
 - **Rendering Options**:
   - `--frame-color`: Set the color of the frame border (RGB values). Example: --frame-color 255,0,0 (red).
-  - `--render`, `-r`: Select the ASCII rendering style (choices: default, legacy, blockNoColor, block, blockv2, braille) (default: default).
+  - `--render`, `-r`: Select the ASCII rendering style (choices: default, legacy, blockNoColor, block, blockv2, braille, halfblock) (default: default).
   - `--diff-mode`, `-dm`: Optimize rendering by only updating changed parts (choices: line, char, none) (default: none).
   - `--output-resolution`, `-or`: Internal processing resolution for video frames (format: W,H|native) (default: native).
   - `--no-transparent`, `-ntr`: Disable transparent background for low brightness pixels (default: enabled).
@@ -156,7 +177,7 @@ uv venv
 source venv/bin/activate  # On Windows: venv\Scripts\activate
 
 # Install development dependencies
-uv pip install -r pyproject.toml --all-extras
+uv pip install -r pyproject.toml --all-extras --reinstall -e .
 ```
 
 ### Code Style
@@ -194,7 +215,7 @@ That's it! Ruff and Typos will automatically run as well.
 - [x] Transparency toggle[^3]
 - [x] Improve CI/CD pipeline
 - [ ] True[^4] multi-threaded parallelism[^5]
-- [ ] Support for playing Youtube videos straight from the URL - potentially something for 1.0, haven't decided yet
+- [x] Support for playing Youtube videos straight from the URL
 
 ## Known Issues
 

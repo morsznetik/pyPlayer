@@ -23,6 +23,11 @@ class ColorManager:
         return f"\033[38;2;{r};{g};{b}m"
 
     @staticmethod
+    @lru_cache(maxsize=None)
+    def rgb_to_ansi_bg(r: int, g: int, b: int) -> str:
+        return f"\033[48;2;{r};{g};{b}m"
+
+    @staticmethod
     def reset_color() -> str:
         return "\033[0m"
 
@@ -39,16 +44,18 @@ class ColorManager:
 
     @staticmethod
     def compress_frame(text: str) -> str:
-        """Compress a frame by optimizing ANSI color codes.
+        """Compress a frame by optimizing ANSI escape sequences.
 
         This method reduces the amount of ANSI escape sequences by combining
-        consecutive characters with the same color code.
+        consecutive characters with the same escape codes. It handles all types
+        of ANSI escape sequences, not just color codes. just for full discretion
+        ai was used
 
         Args:
             text: The text to compress
 
         Returns:
-            The compressed text with optimized ANSI color codes
+            The compressed text with optimized ANSI escape sequences
         """
         if not text:
             return text
@@ -61,11 +68,12 @@ class ColorManager:
                 compressed_lines.append(line)
                 continue
 
+            # Parse the line into tokens (ANSI escape sequences and text)
             tokens: list[tuple[str, str]] = []
-            i: int = 0
+            i = 0
             while i < len(line):
                 if line.startswith("\033[", i):
-                    end: int = line.find("m", i)
+                    end = line.find("m", i)
                     if end != -1:
                         tokens.append(
                             ("ansi", line[i : end + 1])
@@ -79,54 +87,90 @@ class ColorManager:
                     i += 1
 
             optimized: list[tuple[str | None, str]] = []
-            current_color: str | None = None
+            current_ansi_state: dict[str, str] = {}
             current_text = ""
             reset_code = "\033[0m"
 
             for token_type, token_value in tokens:
                 if token_type == "ansi":
-                    if token_value.startswith(
-                        "\033[38;2;"
-                    ):  # checks for true color escape
-                        if current_color != token_value and current_text:
-                            optimized.append(
-                                (current_color, current_text)
-                            )  # append accumulated text with color
-                            current_text = ""
-                        current_color = token_value
-                    elif token_value == reset_code:  # reset to default color
+                    if token_value == reset_code:  # reset all states
                         if current_text:
-                            optimized.append((current_color, current_text))
+                            combined_state = (
+                                "".join(current_ansi_state.values())
+                                if current_ansi_state
+                                else None
+                            )
+                            optimized.append((combined_state, current_text))
                             current_text = ""
                         optimized.append((reset_code, ""))  # append reset code
-                        current_color = None
+                        current_ansi_state.clear()  # clear all states
                     else:
-                        if current_text:
-                            optimized.append((current_color, current_text))
+                        ansi_type = "color"
+                        if token_value.startswith(
+                            "\033[38;2;"
+                        ):  # foreground true color
+                            ansi_type = "fg_color"
+                        elif token_value.startswith(
+                            "\033[48;2;"
+                        ):  # background true color
+                            ansi_type = "bg_color"
+                        elif token_value.startswith("\033[3") and token_value.endswith(
+                            "m"
+                        ):  # standard foreground
+                            ansi_type = "fg_color"
+                        elif token_value.startswith("\033[4") and token_value.endswith(
+                            "m"
+                        ):  # standard background
+                            ansi_type = "bg_color"
+                        elif token_value.startswith("\033[1m"):  # bold
+                            ansi_type = "bold"
+                        elif token_value.startswith("\033[4m"):  # underline
+                            ansi_type = "underline"
+                        # more soon i guess
+
+                        if (
+                            ansi_type in current_ansi_state
+                            and current_ansi_state[ansi_type] != token_value
+                            and current_text
+                        ):
+                            combined_state = (
+                                "".join(current_ansi_state.values())
+                                if current_ansi_state
+                                else None
+                            )
+                            optimized.append((combined_state, current_text))
                             current_text = ""
-                        optimized.append(
-                            (token_value, "")
-                        )  # append other ANSI codes as-is
+
+                        # Update the ANSI state for this type
+                        current_ansi_state[ansi_type] = token_value
                 else:
                     current_text += token_value  # add non-ANSI text
 
+            # Add any remaining text with its combined ANSI state
             if current_text:
-                optimized.append((current_color, current_text))  # add remaining text
+                combined_state = (
+                    "".join(current_ansi_state.values()) if current_ansi_state else None
+                )
+                optimized.append((combined_state, current_text))
 
+            # Build the compressed line
             compressed_line = ""
-            for color, segment_text in optimized:
-                if color is None:
+            for ansi_state, segment_text in optimized:
+                if ansi_state is None:
                     compressed_line += segment_text
-                elif color == reset_code:
+                elif ansi_state == reset_code:
                     compressed_line += reset_code  # add reset sequence
                 else:
-                    compressed_line += color + segment_text  # add color with text
-
-            if any(color is not None and color != reset_code for color, _ in optimized):
-                if not compressed_line.endswith(reset_code):
                     compressed_line += (
-                        reset_code  # ensure reset at the end of colored text
-                    )
+                        ansi_state + segment_text
+                    )  # add ANSI state with text
+
+            if any(
+                ansi_state is not None and ansi_state != reset_code
+                for ansi_state, _ in optimized
+            ):
+                if not compressed_line.endswith(reset_code):
+                    compressed_line += reset_code  # ensure reset at the end
 
             compressed_lines.append(compressed_line)
 
@@ -387,6 +431,73 @@ class BrailleRenderer(BaseRenderer):
         return self.apply_frame_color("\n".join(braille_text))
 
 
+class HalfBlockRenderer(BaseRenderer):
+    @override
+    def render(self, img: Image.Image, width: int, height: int) -> str:
+        threshold = 0
+        if self.transparent:
+            original_gray_img = img.convert("L")
+            threshold = self.calculate_otsu_threshold(original_gray_img)
+            threshold = max(10, int(threshold * 0.4))
+
+        target_height = height * 2
+        img_resized = img.resize((width, target_height), Image.Resampling.LANCZOS)
+        img_rgb = img_resized.convert("RGB")
+        pixels: RGBPixelSequence = list(img_rgb.getdata())
+
+        result = []
+        for y in range(0, target_height, 2):
+            line = []
+            for x in range(width):
+                upper_idx = y * width + x
+                lower_idx = (y + 1) * width + x if y + 1 < target_height else upper_idx
+
+                upper_pixel = (
+                    pixels[upper_idx] if upper_idx < len(pixels) else (0, 0, 0)
+                )
+                lower_pixel = (
+                    pixels[lower_idx] if lower_idx < len(pixels) else (0, 0, 0)
+                )
+
+                if self.transparent:
+                    upper_brightness = (
+                        upper_pixel[0] + upper_pixel[1] + upper_pixel[2]
+                    ) / 3
+                    lower_brightness = (
+                        lower_pixel[0] + lower_pixel[1] + lower_pixel[2]
+                    ) / 3
+                    avg_brightness = (upper_brightness + lower_brightness) / 2
+                    if avg_brightness < threshold:
+                        line.append(
+                            f"{ColorManager.reset_color()} "
+                        )  # background leaks w/o the reset, it should get compressed tho
+                        continue
+
+                if (
+                    upper_pixel == (0, 0, 0)
+                    and lower_pixel == (0, 0, 0)
+                    and self.transparent
+                ):
+                    line.append(" ")
+                    continue
+
+                bg_color = ColorManager.rgb_to_ansi_bg(
+                    upper_pixel[0], upper_pixel[1], upper_pixel[2]
+                )
+                fg_color = ColorManager.rgb_to_ansi(
+                    lower_pixel[0], lower_pixel[1], lower_pixel[2]
+                )
+
+                line.append(f"{bg_color}{fg_color}▄")
+
+            result.append(
+                "".join(line) + ColorManager.reset_color()
+            )  # same here background leaks without the final reset
+
+        # return "\n".join(result)
+        return ColorManager.compress_frame("\n".join(result))
+
+
 class RendererFactory:
     """Factory class for creating renderers.
 
@@ -490,6 +601,7 @@ class RendererFactory:
 # built-in renderers
 RendererFactory.register_renderer(tuple(TextRenderer.styles.keys()), TextRenderer)
 RendererFactory.register_renderer("braille", BrailleRenderer)
+RendererFactory.register_renderer("halfblock", HalfBlockRenderer)
 
 
 class RendererManager:
