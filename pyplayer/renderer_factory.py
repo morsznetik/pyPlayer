@@ -44,16 +44,18 @@ class ColorManager:
 
     @staticmethod
     def compress_frame(text: str) -> str:
-        """Compress a frame by optimizing ANSI color codes.
+        """Compress a frame by optimizing ANSI escape sequences.
 
         This method reduces the amount of ANSI escape sequences by combining
-        consecutive characters with the same color code.
+        consecutive characters with the same escape codes. It handles all types
+        of ANSI escape sequences, not just color codes. just for full discretion
+        ai was used
 
         Args:
             text: The text to compress
 
         Returns:
-            The compressed text with optimized ANSI color codes
+            The compressed text with optimized ANSI escape sequences
         """
         if not text:
             return text
@@ -66,6 +68,7 @@ class ColorManager:
                 compressed_lines.append(line)
                 continue
 
+            # Parse the line into tokens (ANSI escape sequences and text)
             tokens: list[tuple[str, str]] = []
             i = 0
             while i < len(line):
@@ -84,54 +87,90 @@ class ColorManager:
                     i += 1
 
             optimized: list[tuple[str | None, str]] = []
-            current_color: str | None = None
+            current_ansi_state: dict[str, str] = {}
             current_text = ""
             reset_code = "\033[0m"
 
             for token_type, token_value in tokens:
                 if token_type == "ansi":
-                    if token_value.startswith(
-                        "\033[38;2;"
-                    ):  # checks for true color escape
-                        if current_color != token_value and current_text:
-                            optimized.append(
-                                (current_color, current_text)
-                            )  # append accumulated text with color
-                            current_text = ""
-                        current_color = token_value
-                    elif token_value == reset_code:  # reset to default color
+                    if token_value == reset_code:  # reset all states
                         if current_text:
-                            optimized.append((current_color, current_text))
+                            combined_state = (
+                                "".join(current_ansi_state.values())
+                                if current_ansi_state
+                                else None
+                            )
+                            optimized.append((combined_state, current_text))
                             current_text = ""
                         optimized.append((reset_code, ""))  # append reset code
-                        current_color = None
+                        current_ansi_state.clear()  # clear all states
                     else:
-                        if current_text:
-                            optimized.append((current_color, current_text))
+                        ansi_type = "color"
+                        if token_value.startswith(
+                            "\033[38;2;"
+                        ):  # foreground true color
+                            ansi_type = "fg_color"
+                        elif token_value.startswith(
+                            "\033[48;2;"
+                        ):  # background true color
+                            ansi_type = "bg_color"
+                        elif token_value.startswith("\033[3") and token_value.endswith(
+                            "m"
+                        ):  # standard foreground
+                            ansi_type = "fg_color"
+                        elif token_value.startswith("\033[4") and token_value.endswith(
+                            "m"
+                        ):  # standard background
+                            ansi_type = "bg_color"
+                        elif token_value.startswith("\033[1m"):  # bold
+                            ansi_type = "bold"
+                        elif token_value.startswith("\033[4m"):  # underline
+                            ansi_type = "underline"
+                        # more soon i guess
+
+                        if (
+                            ansi_type in current_ansi_state
+                            and current_ansi_state[ansi_type] != token_value
+                            and current_text
+                        ):
+                            combined_state = (
+                                "".join(current_ansi_state.values())
+                                if current_ansi_state
+                                else None
+                            )
+                            optimized.append((combined_state, current_text))
                             current_text = ""
-                        optimized.append(
-                            (token_value, "")
-                        )  # append other ANSI codes as-is
+
+                        # Update the ANSI state for this type
+                        current_ansi_state[ansi_type] = token_value
                 else:
                     current_text += token_value  # add non-ANSI text
 
+            # Add any remaining text with its combined ANSI state
             if current_text:
-                optimized.append((current_color, current_text))  # add remaining text
+                combined_state = (
+                    "".join(current_ansi_state.values()) if current_ansi_state else None
+                )
+                optimized.append((combined_state, current_text))
 
+            # Build the compressed line
             compressed_line = ""
-            for color, segment_text in optimized:
-                if color is None:
+            for ansi_state, segment_text in optimized:
+                if ansi_state is None:
                     compressed_line += segment_text
-                elif color == reset_code:
+                elif ansi_state == reset_code:
                     compressed_line += reset_code  # add reset sequence
                 else:
-                    compressed_line += color + segment_text  # add color with text
-
-            if any(color is not None and color != reset_code for color, _ in optimized):
-                if not compressed_line.endswith(reset_code):
                     compressed_line += (
-                        reset_code  # ensure reset at the end of colored text
-                    )
+                        ansi_state + segment_text
+                    )  # add ANSI state with text
+
+            if any(
+                ansi_state is not None and ansi_state != reset_code
+                for ansi_state, _ in optimized
+            ):
+                if not compressed_line.endswith(reset_code):
+                    compressed_line += reset_code  # ensure reset at the end
 
             compressed_lines.append(compressed_line)
 
@@ -437,7 +476,7 @@ class HalfBlockRenderer(BaseRenderer):
                 if (
                     upper_pixel == (0, 0, 0)
                     and lower_pixel == (0, 0, 0)
-                    and not self.transparent
+                    and self.transparent
                 ):
                     line.append(" ")
                     continue
@@ -455,6 +494,7 @@ class HalfBlockRenderer(BaseRenderer):
                 "".join(line) + ColorManager.reset_color()
             )  # same here background leaks without the final reset
 
+        # return "\n".join(result)
         return ColorManager.compress_frame("\n".join(result))
 
 
