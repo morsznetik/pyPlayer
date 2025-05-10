@@ -46,10 +46,10 @@ class ColorManager:
     def compress_frame(text: str) -> str:
         """Compress a frame by optimizing ANSI escape sequences.
 
-        This method reduces the amount of ANSI escape sequences by combining
-        consecutive characters with the same escape codes. It handles all types
-        of ANSI escape sequences, not just color codes. just for full discretion
-        ai was used
+        This highly optimized implementation handles ANSI escape sequences with or without
+        the escape character and efficiently combines consecutive characters with the same
+        style. Specifically optimized for terminal block characters with background and
+        foreground colors.
 
         Args:
             text: The text to compress
@@ -60,121 +60,107 @@ class ColorManager:
         if not text:
             return text
 
-        lines = text.split("\n")
-        compressed_lines: list[str] = []
+        has_escape_char = "\033[" in text
 
-        for line in lines:
-            if not line or "\033[" not in line:
-                compressed_lines.append(line)
+        result: list[str] = []
+
+        for line in text.split("\n"):
+            if "[" not in line and "\033[" not in line:
+                result.append(line)
                 continue
 
-            # Parse the line into tokens (ANSI escape sequences and text)
-            tokens: list[tuple[str, str]] = []
+            if has_escape_char:
+                processed_line = line
+            else:
+                processed_line = "\033" + line.replace("[", "\033[")
+
             i = 0
-            while i < len(line):
-                if line.startswith("\033[", i):
-                    end = line.find("m", i)
-                    if end != -1:
-                        tokens.append(
-                            ("ansi", line[i : end + 1])
-                        )  # capture ANSI escape
-                        i = end + 1
-                    else:
-                        tokens.append(("text", line[i]))  # capture non-ANSI text
+            current_bg = None
+            current_fg = None
+            compressed: list[str] = []
+            char_buffer: list[str] = []
+
+            while i < len(processed_line):
+                if processed_line.startswith("\033[", i):
+                    end = processed_line.find("m", i)
+                    if end == -1:
+                        # bad ANSI sequence
+                        char_buffer.append(processed_line[i])
                         i += 1
+                        continue
+
+                    ansi_code = processed_line[i : end + 1]
+
+                    if ansi_code == "\033[0m":
+                        if char_buffer:
+                            prefix = ""
+                            if current_bg:
+                                prefix += current_bg
+                            if current_fg:
+                                prefix += current_fg
+                            compressed.append(prefix + "".join(char_buffer))
+                            char_buffer = []
+
+                        compressed.append(ansi_code)
+                        current_bg = current_fg = None
+                    elif ansi_code.startswith("\033[48;"):
+                        if current_bg != ansi_code and char_buffer:
+                            prefix = ""
+                            if current_bg:
+                                prefix += current_bg
+                            if current_fg:
+                                prefix += current_fg
+                            compressed.append(prefix + "".join(char_buffer))
+                            char_buffer = []
+
+                        current_bg = ansi_code
+                    elif ansi_code.startswith("\033[38;"):
+                        if current_fg != ansi_code and char_buffer:
+                            prefix = ""
+                            if current_bg:
+                                prefix += current_bg
+                            if current_fg:
+                                prefix += current_fg
+                            compressed.append(prefix + "".join(char_buffer))
+                            char_buffer = []
+
+                        current_fg = ansi_code
+                    else:
+                        if char_buffer:
+                            prefix = ""
+                            if current_bg:
+                                prefix += current_bg
+                            if current_fg:
+                                prefix += current_fg
+                            compressed.append(prefix + "".join(char_buffer))
+                            char_buffer = []
+
+                        compressed.append(ansi_code)
+
+                    i = end + 1
                 else:
-                    tokens.append(("text", line[i]))  # capture non-ANSI text
+                    char_buffer.append(processed_line[i])
                     i += 1
 
-            optimized: list[tuple[str | None, str]] = []
-            current_ansi_state: dict[str, str] = {}
-            current_text = ""
-            reset_code = "\033[0m"
+            if char_buffer:
+                prefix = ""
+                if current_bg:
+                    prefix += current_bg
+                if current_fg:
+                    prefix += current_fg
+                compressed.append(prefix + "".join(char_buffer))
 
-            for token_type, token_value in tokens:
-                if token_type == "ansi":
-                    if token_value == reset_code:  # reset all states
-                        if current_text:
-                            combined_state = (
-                                "".join(current_ansi_state.values())
-                                if current_ansi_state
-                                else None
-                            )
-                            optimized.append((combined_state, current_text))
-                            current_text = ""
-                        optimized.append((reset_code, ""))  # append reset code
-                        current_ansi_state.clear()  # clear all states
-                    else:
-                        ansi_type = "color"
-                        if token_value.startswith(
-                            "\033[38;2;"
-                        ):  # foreground true color
-                            ansi_type = "fg_color"
-                        elif token_value.startswith(
-                            "\033[48;2;"
-                        ):  # background true color
-                            ansi_type = "bg_color"
-                        elif token_value.startswith("\033[3") and token_value.endswith(
-                            "m"
-                        ):  # standard foreground
-                            ansi_type = "fg_color"
-                        elif token_value.startswith("\033[4") and token_value.endswith(
-                            "m"
-                        ):  # standard background
-                            ansi_type = "bg_color"
-                        elif token_value.startswith("\033[1m"):  # bold
-                            ansi_type = "bold"
-                        elif token_value.startswith("\033[4m"):  # underline
-                            ansi_type = "underline"
-                        # more soon i guess
+            if (current_bg or current_fg) and not compressed[-1].endswith("\033[0m"):
+                compressed.append("\033[0m")
 
-                        if (
-                            ansi_type in current_ansi_state
-                            and current_ansi_state[ansi_type] != token_value
-                            and current_text
-                        ):
-                            combined_state = (
-                                "".join(current_ansi_state.values())
-                                if current_ansi_state
-                                else None
-                            )
-                            optimized.append((combined_state, current_text))
-                            current_text = ""
+            # Convert back to the original format if needed
+            final_line = "".join(compressed)
+            if not has_escape_char:
+                final_line = final_line.replace("\033", "")
 
-                        # Update the ANSI state for this type
-                        current_ansi_state[ansi_type] = token_value
-                else:
-                    current_text += token_value  # add non-ANSI text
+            result.append(final_line)
 
-            # Add any remaining text with its combined ANSI state
-            if current_text:
-                combined_state = (
-                    "".join(current_ansi_state.values()) if current_ansi_state else None
-                )
-                optimized.append((combined_state, current_text))
-
-            # Build the compressed line
-            compressed_line = ""
-            for ansi_state, segment_text in optimized:
-                if ansi_state is None:
-                    compressed_line += segment_text
-                elif ansi_state == reset_code:
-                    compressed_line += reset_code  # add reset sequence
-                else:
-                    compressed_line += (
-                        ansi_state + segment_text
-                    )  # add ANSI state with text
-
-            if any(
-                ansi_state is not None and ansi_state != reset_code
-                for ansi_state, _ in optimized
-            ):
-                if not compressed_line.endswith(reset_code):
-                    compressed_line += reset_code  # ensure reset at the end
-
-            compressed_lines.append(compressed_line)
-
-        return "\n".join(compressed_lines)
+        return "\n".join(result)
 
 
 class BaseRenderer(ABC):
