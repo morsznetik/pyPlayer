@@ -7,7 +7,7 @@ from yt_dlp import YoutubeDL  # should already be checked if exists in cli
 try:
     from yt_dlp import YDLOpts
 except ImportError:
-    pass  # for type checking only - requires yt-dlp-types
+    pass
 
 
 class YouTubeDownloader:
@@ -37,7 +37,7 @@ class YouTubeDownloader:
         """
         output_path = os.path.join(self.temp_dir, "video.%(ext)s")
 
-        ydl_opts: YDLOpts = {
+        ydl_opts: YDLOpts = {  # pyright: ignore[reportPossiblyUnboundVariable]  # just for typing
             "format": "best[ext=mp4]/best",  # prefer mp4
             "outtmpl": output_path,
             "quiet": True,
@@ -45,7 +45,7 @@ class YouTubeDownloader:
         }
 
         try:
-            with YoutubeDL(ydl_opts) as ydl:
+            with YoutubeDL(ydl_opts) as ydl:  # pyright: ignore[reportPossiblyUnboundVariable]  # just for typing
                 info: dict[str, Any] | None = ydl.extract_info(url)
                 if info is None:
                     raise YouTubeError("Failed to extract video information")
