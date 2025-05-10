@@ -21,7 +21,7 @@ Contributions are very much welcome! Please open an issue or submit a pull reque
 - **default**: Detailed ASCII character set
   - Medium quality, fast rendering
   - Fastest terminal performance
-  - Decent color support (*will look blurry but is arguably the best with high-complexity videos*)
+  - Excellent color support (*will look blurry but is arguably the best with high-complexity videos*)
 - **halfblock**: Unicode Lower half block (▄) rendering (1:1 pixel ratio); recommended for most
   - High quality, slow-ish rendering
   - Meh terminal performance
@@ -29,18 +29,21 @@ Contributions are very much welcome! Please open an issue or submit a pull reque
 - **legacy**: Simple ASCII character set
   - Low quality, fastest rendering
   - Fastest terminal performance
-  - Bad color support (*it works, but doesn't look great*)
-- **block**: Block-based rendering
-  - Very low quality, decently fast rendering
-  - Slow terminal performance
-  - Best-ish color support (*will be reworked with a smarter brightness algorithm, see TODO*)
+  - Poor color support (*it works, but doesn't look great*)
 - **braille**: Unicode 2x4 braille pattern rendering
   - Best* quality, slow rendering
   - Slow terminal performance
-  - Very good color support (*recommended for high-complexity videos, bad with videos with low dynamic range*)
-- others **(these are very much unsupported and are deprecated!)**:
-  - **blockNoColor**: hacky way to have transparency with block rendering, as the name suggests best way to use it is without color
-  - **blockv2**: hacky way to only have pixel-based rendering with only the full block being used
+  - Decent color support (*recommended for high-complexity videos, bad with videos with low dynamic range*)
+
+#### Deprecated Rendering Styles
+
+The following styles are deprecated and will be removed in a future version; they are still useable and show up in the help menu.
+
+Superseded by halfblock:
+
+- **block**: Block-based rendering
+- **blockNoColor**: Hacky way to have transparency with block rendering
+- **blockv2**: Pixel-based rendering with only full blocks
 
 ### Color Support
 
