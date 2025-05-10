@@ -22,6 +22,10 @@ Contributions are very much welcome! Please open an issue or submit a pull reque
   - Medium quality, fast rendering
   - Fastest terminal performance
   - Decent color support (*will look blurry but is arguably the best with high-complexity videos*)
+- **halfblock**: Unicode Lower half block (▄) rendering (1:1 pixel ratio); recommended for most
+  - High quality, slow-ish rendering
+  - Meh terminal performance
+  - Excellent color support (*achieves double vertical resolution by using foreground/background colors but same drawbacks as the default, it'll look blurry if it's small*)
 - **legacy**: Simple ASCII character set
   - Low quality, fastest rendering
   - Fastest terminal performance
@@ -34,10 +38,6 @@ Contributions are very much welcome! Please open an issue or submit a pull reque
   - Best* quality, slow rendering
   - Slow terminal performance
   - Very good color support (*recommended for high-complexity videos, bad with videos with low dynamic range*)
-- **halfblock**: Unicode Lower half block (▄) rendering
-  - High quality, slow rendering
-  - Good terminal performance
-  - Excellent color support (*achieves double vertical resolution by using foreground/background colors*)
 - others **(these are very much unsupported and are deprecated!)**:
   - **blockNoColor**: hacky way to have transparency with block rendering, as the name suggests best way to use it is without color
   - **blockv2**: hacky way to only have pixel-based rendering with only the full block being used
