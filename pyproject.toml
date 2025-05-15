@@ -20,6 +20,7 @@ dev = [
     "types-tqdm",
     "yt-dlp-types",
     "pytest",
+    "pyinstaller",
 ]
 
 youtube = [
