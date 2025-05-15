@@ -23,6 +23,11 @@ class ColorManager:
         return f"\033[38;2;{r};{g};{b}m"
 
     @staticmethod
+    @lru_cache(maxsize=None)
+    def rgb_to_ansi_bg(r: int, g: int, b: int) -> str:
+        return f"\033[48;2;{r};{g};{b}m"
+
+    @staticmethod
     def reset_color() -> str:
         return "\033[0m"
 
@@ -39,98 +44,123 @@ class ColorManager:
 
     @staticmethod
     def compress_frame(text: str) -> str:
-        """Compress a frame by optimizing ANSI color codes.
+        """Compress a frame by optimizing ANSI escape sequences.
 
-        This method reduces the amount of ANSI escape sequences by combining
-        consecutive characters with the same color code.
+        This highly optimized implementation handles ANSI escape sequences with or without
+        the escape character and efficiently combines consecutive characters with the same
+        style. Specifically optimized for terminal block characters with background and
+        foreground colors.
 
         Args:
             text: The text to compress
 
         Returns:
-            The compressed text with optimized ANSI color codes
+            The compressed text with optimized ANSI escape sequences
         """
         if not text:
             return text
 
-        lines = text.split("\n")
-        compressed_lines: list[str] = []
+        has_escape_char = "\033[" in text
 
-        for line in lines:
-            if not line or "\033[" not in line:
-                compressed_lines.append(line)
+        result: list[str] = []
+
+        for line in text.split("\n"):
+            if "[" not in line and "\033[" not in line:
+                result.append(line)
                 continue
 
-            tokens: list[tuple[str, str]] = []
-            i: int = 0
-            while i < len(line):
-                if line.startswith("\033[", i):
-                    end: int = line.find("m", i)
-                    if end != -1:
-                        tokens.append(
-                            ("ansi", line[i : end + 1])
-                        )  # capture ANSI escape
-                        i = end + 1
-                    else:
-                        tokens.append(("text", line[i]))  # capture non-ANSI text
+            if has_escape_char:
+                processed_line = line
+            else:
+                processed_line = "\033" + line.replace("[", "\033[")
+
+            i = 0
+            current_bg = None
+            current_fg = None
+            compressed: list[str] = []
+            char_buffer: list[str] = []
+
+            while i < len(processed_line):
+                if processed_line.startswith("\033[", i):
+                    end = processed_line.find("m", i)
+                    if end == -1:
+                        # bad ANSI sequence
+                        char_buffer.append(processed_line[i])
                         i += 1
+                        continue
+
+                    ansi_code = processed_line[i : end + 1]
+
+                    if ansi_code == "\033[0m":
+                        if char_buffer:
+                            prefix = ""
+                            if current_bg:
+                                prefix += current_bg
+                            if current_fg:
+                                prefix += current_fg
+                            compressed.append(prefix + "".join(char_buffer))
+                            char_buffer = []
+
+                        compressed.append(ansi_code)
+                        current_bg = current_fg = None
+                    elif ansi_code.startswith("\033[48;"):
+                        if current_bg != ansi_code and char_buffer:
+                            prefix = ""
+                            if current_bg:
+                                prefix += current_bg
+                            if current_fg:
+                                prefix += current_fg
+                            compressed.append(prefix + "".join(char_buffer))
+                            char_buffer = []
+
+                        current_bg = ansi_code
+                    elif ansi_code.startswith("\033[38;"):
+                        if current_fg != ansi_code and char_buffer:
+                            prefix = ""
+                            if current_bg:
+                                prefix += current_bg
+                            if current_fg:
+                                prefix += current_fg
+                            compressed.append(prefix + "".join(char_buffer))
+                            char_buffer = []
+
+                        current_fg = ansi_code
+                    else:
+                        if char_buffer:
+                            prefix = ""
+                            if current_bg:
+                                prefix += current_bg
+                            if current_fg:
+                                prefix += current_fg
+                            compressed.append(prefix + "".join(char_buffer))
+                            char_buffer = []
+
+                        compressed.append(ansi_code)
+
+                    i = end + 1
                 else:
-                    tokens.append(("text", line[i]))  # capture non-ANSI text
+                    char_buffer.append(processed_line[i])
                     i += 1
 
-            optimized: list[tuple[str | None, str]] = []
-            current_color: str | None = None
-            current_text = ""
-            reset_code = "\033[0m"
+            if char_buffer:
+                prefix = ""
+                if current_bg:
+                    prefix += current_bg
+                if current_fg:
+                    prefix += current_fg
+                compressed.append(prefix + "".join(char_buffer))
 
-            for token_type, token_value in tokens:
-                if token_type == "ansi":
-                    if token_value.startswith(
-                        "\033[38;2;"
-                    ):  # checks for true color escape
-                        if current_color != token_value and current_text:
-                            optimized.append(
-                                (current_color, current_text)
-                            )  # append accumulated text with color
-                            current_text = ""
-                        current_color = token_value
-                    elif token_value == reset_code:  # reset to default color
-                        if current_text:
-                            optimized.append((current_color, current_text))
-                            current_text = ""
-                        optimized.append((reset_code, ""))  # append reset code
-                        current_color = None
-                    else:
-                        if current_text:
-                            optimized.append((current_color, current_text))
-                            current_text = ""
-                        optimized.append(
-                            (token_value, "")
-                        )  # append other ANSI codes as-is
-                else:
-                    current_text += token_value  # add non-ANSI text
+            if (current_bg or current_fg) and not compressed[-1].endswith("\033[0m"):
+                compressed.append("\033[0m")
 
-            if current_text:
-                optimized.append((current_color, current_text))  # add remaining text
+            # Convert back to the original format if needed
+            final_line = "".join(compressed)
+            if not has_escape_char:
+                final_line = final_line.replace("\033", "")
 
-            compressed_line = ""
-            for color, segment_text in optimized:
-                if color is None:
-                    compressed_line += segment_text
-                elif color == reset_code:
-                    compressed_line += reset_code  # add reset sequence
-                else:
-                    compressed_line += color + segment_text  # add color with text
+            result.append(final_line)
 
-            if any(color is not None and color != reset_code for color, _ in optimized):
-                if not compressed_line.endswith(reset_code):
-                    compressed_line += (
-                        reset_code  # ensure reset at the end of colored text
-                    )
-
-            compressed_lines.append(compressed_line)
-
-        return "\n".join(compressed_lines)
+        return "\n".join(result)
 
 
 class BaseRenderer(ABC):
@@ -387,6 +417,73 @@ class BrailleRenderer(BaseRenderer):
         return self.apply_frame_color("\n".join(braille_text))
 
 
+class HalfBlockRenderer(BaseRenderer):
+    @override
+    def render(self, img: Image.Image, width: int, height: int) -> str:
+        threshold = 0
+        if self.transparent:
+            original_gray_img = img.convert("L")
+            threshold = self.calculate_otsu_threshold(original_gray_img)
+            threshold = max(10, int(threshold * 0.4))
+
+        target_height = height * 2
+        img_resized = img.resize((width, target_height), Image.Resampling.LANCZOS)
+        img_rgb = img_resized.convert("RGB")
+        pixels: RGBPixelSequence = list(img_rgb.getdata())
+
+        result = []
+        for y in range(0, target_height, 2):
+            line = []
+            for x in range(width):
+                upper_idx = y * width + x
+                lower_idx = (y + 1) * width + x if y + 1 < target_height else upper_idx
+
+                upper_pixel = (
+                    pixels[upper_idx] if upper_idx < len(pixels) else (0, 0, 0)
+                )
+                lower_pixel = (
+                    pixels[lower_idx] if lower_idx < len(pixels) else (0, 0, 0)
+                )
+
+                if self.transparent:
+                    upper_brightness = (
+                        upper_pixel[0] + upper_pixel[1] + upper_pixel[2]
+                    ) / 3
+                    lower_brightness = (
+                        lower_pixel[0] + lower_pixel[1] + lower_pixel[2]
+                    ) / 3
+                    avg_brightness = (upper_brightness + lower_brightness) / 2
+                    if avg_brightness < threshold:
+                        line.append(
+                            f"{ColorManager.reset_color()} "
+                        )  # background leaks w/o the reset, it should get compressed tho
+                        continue
+
+                if (
+                    upper_pixel == (0, 0, 0)
+                    and lower_pixel == (0, 0, 0)
+                    and self.transparent
+                ):
+                    line.append(" ")
+                    continue
+
+                bg_color = ColorManager.rgb_to_ansi_bg(
+                    upper_pixel[0], upper_pixel[1], upper_pixel[2]
+                )
+                fg_color = ColorManager.rgb_to_ansi(
+                    lower_pixel[0], lower_pixel[1], lower_pixel[2]
+                )
+
+                line.append(f"{bg_color}{fg_color}▄")
+
+            result.append(
+                "".join(line) + ColorManager.reset_color()
+            )  # same here background leaks without the final reset
+
+        # return "\n".join(result)
+        return ColorManager.compress_frame("\n".join(result))
+
+
 class RendererFactory:
     """Factory class for creating renderers.
 
@@ -490,6 +587,7 @@ class RendererFactory:
 # built-in renderers
 RendererFactory.register_renderer(tuple(TextRenderer.styles.keys()), TextRenderer)
 RendererFactory.register_renderer("braille", BrailleRenderer)
+RendererFactory.register_renderer("halfblock", HalfBlockRenderer)
 
 
 class RendererManager:

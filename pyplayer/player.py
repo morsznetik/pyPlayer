@@ -11,8 +11,7 @@ import re
 import numpy as np
 from typing import Callable
 from .video_processor import VideoProcessor
-from .renderer_factory import RendererManager
-from .renderer_factory import RGBPixel
+from .renderer_factory import RendererManager, RGBPixel
 from .exceptions import (
     PyPlayerError,
     FrameNotFoundError,
@@ -20,6 +19,13 @@ from .exceptions import (
     AudioPlaybackError,
     VideoProcessingError,
 )
+
+
+def safe_get_terminal_size() -> os.terminal_size:
+    try:
+        return os.get_terminal_size()
+    except OSError:
+        return os.terminal_size((120, 60))
 
 
 class Player:
@@ -82,9 +88,9 @@ class Player:
                 for f in os.listdir(self.frames_dir)
                 if f.endswith(".png")
             )
-            term_size = os.get_terminal_size()
+            columns, lines = safe_get_terminal_size()
             self.pre_rendered_frames = self.renderer.pre_render_frames(
-                frame_files, term_size.columns, term_size.lines, self.num_threads
+                frame_files, columns, lines, self.num_threads
             )
 
     def play(self) -> None:
@@ -173,7 +179,7 @@ class Player:
 
     def _play_frames(self) -> None:
         """Handle frame playback and timing"""
-        term_size = os.get_terminal_size()
+        term_size = safe_get_terminal_size()
         frame_duration = 1.0 / self.fps
         start_time = time.perf_counter()
         next_frame_time = start_time
@@ -205,7 +211,7 @@ class Player:
                     current_frame += 1
                     continue
 
-                term_size = os.get_terminal_size()
+                term_size = safe_get_terminal_size()
 
                 frame_path = frame_files[current_frame]
                 if not os.path.exists(frame_path):
@@ -342,7 +348,7 @@ class Player:
             time.sleep(0.1)
 
         if self.debug and frame_times:
-            term_size = os.get_terminal_size()
+            term_size = safe_get_terminal_size()
 
             # statistics
             frames_played = total_frames - skipped_frames

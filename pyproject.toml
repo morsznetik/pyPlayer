@@ -18,7 +18,13 @@ dev = [
     "ruff",
     "basedpyright",
     "types-tqdm",
+    "yt-dlp-types",
     "pytest",
+    "pyinstaller",
+]
+
+youtube = [
+    "yt-dlp",
 ]
 
 [project.scripts]

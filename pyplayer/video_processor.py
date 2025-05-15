@@ -75,7 +75,7 @@ class VideoProcessor:
         try:
             input_stream = ffmpeg.input(filename=self.video_path)
             output_stream = input_stream.output(
-                filename=self.audio_path, q="0", map="a"
+                filename=self.audio_path, q="0", map="a", acodec="pcm_s16le"
             )
             output_stream.run(
                 capture_stdout=True, capture_stderr=True, overwrite_output=True
