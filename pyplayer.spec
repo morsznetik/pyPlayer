@@ -26,7 +26,7 @@ exe = EXE(
     a.scripts,
     a.binaries,
     a.zipfiles,
-    a.data,
+    a.datas,
     [],
     name='pyplayer',
     debug=False,
